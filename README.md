@@ -1,5 +1,6 @@
-# n8n-nodes-transpareo
+# @transpareo/n8n-nodes-transpareo
 
+[![npm](https://img.shields.io/npm/v/@transpareo/n8n-nodes-transpareo)](https://www.npmjs.com/package/@transpareo/n8n-nodes-transpareo)
 [![licence](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)
 
 [n8n](https://n8n.io) nodes for [Transpareo](https://transpareo.com): work
@@ -29,8 +30,16 @@ The package holds three nodes:
 ## Installation
 
 In n8n, open **Settings**, then **Community Nodes**, choose **Install**
-and enter `n8n-nodes-transpareo`. n8n's guide covers the details,
-including self-hosted installs from the command line:
+and enter `@transpareo/n8n-nodes-transpareo`. On a self-hosted n8n the
+command line works too, in n8n's nodes folder, followed by a restart
+of n8n:
+
+```sh
+mkdir -p ~/.n8n/nodes
+npm install --prefix ~/.n8n/nodes @transpareo/n8n-nodes-transpareo
+```
+
+n8n's guide covers the details:
 <https://docs.n8n.io/integrations/community-nodes/installation/>.
 
 ## Credentials

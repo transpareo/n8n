@@ -1,5 +1,5 @@
 {
-	"node": "n8n-nodes-transpareo.transpareo",
+	"node": "@transpareo/n8n-nodes-transpareo.transpareo",
 	"nodeVersion": "1.0",
 	"codexVersion": "1.0",
 	"categories": ["Data & Storage", "Productivity"],

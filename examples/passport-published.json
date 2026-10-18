@@ -8,7 +8,7 @@
 			},
 			"id": "7d0c1e8a-2f4b-4c1d-9a51-0d3c2b6e1a01",
 			"name": "Transpareo Trigger",
-			"type": "n8n-nodes-transpareo.transpareoTrigger",
+			"type": "@transpareo/n8n-nodes-transpareo.transpareoTrigger",
 			"typeVersion": 1,
 			"position": [0, 0],
 			"webhookId": "b6f1d7c2-5e3a-4f0b-8c9d-1a2b3c4d5e6f",
@@ -31,7 +31,7 @@
 			},
 			"id": "7d0c1e8a-2f4b-4c1d-9a51-0d3c2b6e1a02",
 			"name": "Get Passport",
-			"type": "n8n-nodes-transpareo.transpareo",
+			"type": "@transpareo/n8n-nodes-transpareo.transpareo",
 			"typeVersion": 1,
 			"position": [240, 0],
 			"credentials": {

@@ -1,5 +1,5 @@
 {
-	"name": "n8n-nodes-transpareo",
+	"name": "@transpareo/n8n-nodes-transpareo",
 	"version": "0.1.0",
 	"description": "n8n nodes for Transpareo: products, components, Digital Product Passports, lots and tasks, with webhook and polling triggers",
 	"license": "MIT",
@@ -40,6 +40,9 @@
 	"files": [
 		"dist"
 	],
+	"publishConfig": {
+		"access": "public"
+	},
 	"n8n": {
 		"n8nNodesApiVersion": 1,
 		"strict": true,

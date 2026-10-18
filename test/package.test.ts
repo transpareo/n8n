@@ -16,11 +16,14 @@ const sources = import.meta.glob(
 	},
 ) as Record<string, string>;
 
-const documents = import.meta.glob(['../README.md', '../CHANGELOG.md', '../package.json'], {
-	query: '?raw',
-	import: 'default',
-	eager: true,
-}) as Record<string, string>;
+const documents = import.meta.glob(
+	['../README.md', '../CHANGELOG.md', '../package.json', '../examples/*.json'],
+	{
+		query: '?raw',
+		import: 'default',
+		eager: true,
+	},
+) as Record<string, string>;
 
 const codices = import.meta.glob('../nodes/*/*.node.json', {
 	import: 'default',
@@ -58,6 +61,22 @@ describe('the package as n8n loads it', () => {
 		}
 	});
 
+	it('is published publicly under the transpareo organisation, named as n8n requires', () => {
+		expect(manifest.name).toBe('@transpareo/n8n-nodes-transpareo');
+		expect(manifest.name).toMatch(/^@[^/]+\/n8n-nodes-.+$/);
+		expect(manifest.keywords).toContain('n8n-community-node-package');
+		expect((manifest as { publishConfig?: object }).publishConfig).toEqual({ access: 'public' });
+	});
+
+	it('names the package in the example workflow and the install line', () => {
+		const example = JSON.parse(documents['../examples/passport-published.json']);
+		const types = (example.nodes as Array<{ type: string }>).map((node) => node.type);
+		const ours = types.filter((type) => !type.startsWith('n8n-nodes-base.'));
+
+		expect(ours).toEqual([`${manifest.name}.transpareoTrigger`, `${manifest.name}.transpareo`]);
+		expect(documents['../README.md']).toContain(`enter \`${manifest.name}\``);
+	});
+
 	it('has no runtime dependencies', () => {
 		expect((manifest as { dependencies?: object }).dependencies ?? {}).toEqual({});
 		expect(Object.keys(manifest.peerDependencies)).toEqual(['n8n-workflow']);
@@ -69,7 +88,7 @@ describe('the package as n8n loads it', () => {
 		const files = { ...sources, ...documents };
 		const offenders = Object.keys(files).filter((file) => banned.test(files[file]));
 
-		expect(Object.keys(documents)).toHaveLength(3);
+		expect(Object.keys(documents)).toHaveLength(4);
 		expect(offenders).toEqual([]);
 	});
 });
