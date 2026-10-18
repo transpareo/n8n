@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Transpareo } from '../nodes/Transpareo/Transpareo.node';
-import { FakeWorkspace, runNode } from './harness';
+import { FakeWorkspace } from './fake-workspace';
+import { runNode } from './harness';
 
 const node = new Transpareo();
 

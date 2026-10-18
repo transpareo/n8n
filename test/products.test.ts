@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { INodeType } from 'n8n-workflow';
 import { TranspareoApi } from '../credentials/TranspareoApi.credentials';
 import { Transpareo } from '../nodes/Transpareo/Transpareo.node';
-import { FakeWorkspace, runNode } from './harness';
+import { FakeWorkspace } from './fake-workspace';
+import { runNode } from './harness';
 
 // The node n8n's credential tester builds around a credential's test
 // request: no parameters, the request as the credential declares it.

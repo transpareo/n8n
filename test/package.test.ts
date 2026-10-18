@@ -50,6 +50,14 @@ describe('the package as n8n loads it', () => {
 		}
 	});
 
+	it('keeps the request mock out of what the live suite loads', () => {
+		const loaded = ['./harness.ts', './e2e/live.test.ts'];
+		for (const file of loaded) {
+			expect(Object.keys(sources)).toContain(file);
+			expect(sources[file]).not.toMatch(/from '(nock|\.\/fake-workspace)'/);
+		}
+	});
+
 	it('has no runtime dependencies', () => {
 		expect((manifest as { dependencies?: object }).dependencies ?? {}).toEqual({});
 		expect(Object.keys(manifest.peerDependencies)).toEqual(['n8n-workflow']);
