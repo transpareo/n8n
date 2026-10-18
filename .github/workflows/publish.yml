@@ -1,0 +1,45 @@
+# Publishes the package to npm on every version tag, with an npm
+# provenance statement, as n8n requires of verified community nodes.
+#
+# One-time setup on npmjs.com: in the package's settings, under
+# Trusted Publishers, add GitHub Actions with the repository
+# transpareo/n8n and the workflow publish.yml. npm then accepts the
+# workflow's OIDC token and no secret is stored in this repository.
+#
+# A release starts locally with `npm run release`, which lints, builds,
+# asks for the version, updates the changelog, commits, tags and pushes;
+# the tag starts this workflow.
+
+name: Publish
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Release
+        run: npm run release

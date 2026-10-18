@@ -1,0 +1,69 @@
+{
+	"name": "n8n-nodes-transpareo",
+	"version": "0.1.0",
+	"description": "n8n nodes for Transpareo: products, components, Digital Product Passports, lots and tasks, with webhook and polling triggers",
+	"license": "MIT",
+	"homepage": "https://github.com/transpareo/n8n#readme",
+	"bugs": {
+		"url": "https://github.com/transpareo/n8n/issues"
+	},
+	"keywords": [
+		"n8n-community-node-package",
+		"n8n",
+		"transpareo",
+		"digital product passport",
+		"dpp"
+	],
+	"author": {
+		"name": "Transpareo",
+		"email": "hello@transpareo.com",
+		"url": "https://transpareo.com"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/transpareo/n8n.git"
+	},
+	"scripts": {
+		"build": "n8n-node build",
+		"build:watch": "tsc --watch",
+		"dev": "n8n-node dev",
+		"lint": "n8n-node lint",
+		"lint:fix": "n8n-node lint --fix",
+		"format": "prettier --write credentials nodes test examples",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:e2e": "vitest run -c vitest.e2e.config.mts",
+		"typecheck": "tsc --noEmit -p tsconfig.test.json",
+		"release": "n8n-node release",
+		"prepublishOnly": "n8n-node prerelease"
+	},
+	"files": [
+		"dist"
+	],
+	"n8n": {
+		"n8nNodesApiVersion": 1,
+		"strict": true,
+		"credentials": [
+			"dist/credentials/TranspareoApi.credentials.js"
+		],
+		"nodes": [
+			"dist/nodes/Transpareo/Transpareo.node.js",
+			"dist/nodes/TranspareoTrigger/TranspareoTrigger.node.js",
+			"dist/nodes/TranspareoPollingTrigger/TranspareoPollingTrigger.node.js"
+		]
+	},
+	"devDependencies": {
+		"@n8n/node-cli": "0.52.5",
+		"eslint": "9.32.0",
+		"n8n-core": "2.43.5",
+		"n8n-workflow": "2.43.5",
+		"nock": "^14.0.17",
+		"prettier": "3.6.2",
+		"release-it": "^21.1.0",
+		"typescript": "5.9.2",
+		"vitest": "^5.0.5"
+	},
+	"peerDependencies": {
+		"n8n-workflow": "*"
+	}
+}

@@ -1,0 +1,74 @@
+{
+	"name": "Passport published",
+	"nodes": [
+		{
+			"parameters": {
+				"events": ["published"],
+				"passportCodes": []
+			},
+			"id": "7d0c1e8a-2f4b-4c1d-9a51-0d3c2b6e1a01",
+			"name": "Transpareo Trigger",
+			"type": "n8n-nodes-transpareo.transpareoTrigger",
+			"typeVersion": 1,
+			"position": [0, 0],
+			"webhookId": "b6f1d7c2-5e3a-4f0b-8c9d-1a2b3c4d5e6f",
+			"credentials": {
+				"transpareoApi": {
+					"id": "",
+					"name": "Transpareo API"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"resource": "passport",
+				"operation": "get",
+				"passport": {
+					"__rl": true,
+					"mode": "code",
+					"value": "={{ $json.dpp_code }}"
+				}
+			},
+			"id": "7d0c1e8a-2f4b-4c1d-9a51-0d3c2b6e1a02",
+			"name": "Get Passport",
+			"type": "n8n-nodes-transpareo.transpareo",
+			"typeVersion": 1,
+			"position": [240, 0],
+			"credentials": {
+				"transpareoApi": {
+					"id": "",
+					"name": "Transpareo API"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"assignments": {
+					"assignments": [
+						{
+							"id": "message",
+							"name": "message",
+							"value": "=Passport {{ $json.code }} of {{ $json.unlockable.name }} is published: {{ $json.url }}",
+							"type": "string"
+						}
+					]
+				},
+				"options": {}
+			},
+			"id": "7d0c1e8a-2f4b-4c1d-9a51-0d3c2b6e1a03",
+			"name": "Message",
+			"type": "n8n-nodes-base.set",
+			"typeVersion": 3.4,
+			"position": [480, 0]
+		}
+	],
+	"connections": {
+		"Transpareo Trigger": {
+			"main": [[{ "node": "Get Passport", "type": "main", "index": 0 }]]
+		},
+		"Get Passport": {
+			"main": [[{ "node": "Message", "type": "main", "index": 0 }]]
+		}
+	},
+	"settings": {}
+}
