@@ -103,7 +103,7 @@ describe('Transpareo passport operations', () => {
 		});
 	});
 
-	it('reads what a passport of a product needs', async () => {
+	it('reads what a passport of a product needs at the granularity the workspace issues', async () => {
 		workspace.on('GET', '/api/dpps/requirements', { body: { defaultGranularity: 'item' } });
 
 		await runNode(node, workspace, {
@@ -111,26 +111,19 @@ describe('Transpareo passport operations', () => {
 				resource: 'passport',
 				operation: 'getRequirements',
 				product: { __rl: true, mode: 'list', value: '11' },
-				requirementsGranularity: 'item',
-			},
-		});
-
-		expect(workspace.apiRequests()[0].query).toEqual({ productId: '11', granularity: 'item' });
-	});
-
-	it('leaves the granularity to the workspace when none is picked', async () => {
-		workspace.on('GET', '/api/dpps/requirements', { body: {} });
-
-		await runNode(node, workspace, {
-			parameters: {
-				resource: 'passport',
-				operation: 'getRequirements',
-				product: { __rl: true, mode: 'id', value: '11' },
-				requirementsGranularity: '',
 			},
 		});
 
 		expect(workspace.apiRequests()[0].query).toEqual({ productId: '11' });
+	});
+
+	it('offers no granularity for requirements, since the workspace refuses all but its own', () => {
+		const shown = node.description.properties.filter((property) => {
+			const show = property.displayOptions?.show;
+			return show?.resource?.includes('passport') && show.operation?.includes('getRequirements');
+		});
+
+		expect(shown.map((property) => property.name)).toEqual(['product']);
 	});
 
 	it('gets a passport named by its code through an exact match', async () => {

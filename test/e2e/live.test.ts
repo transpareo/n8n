@@ -134,12 +134,12 @@ describe.skipIf(!configured)('against a real workspace', () => {
 					resource: 'passport',
 					operation: 'getRequirements',
 					product: { __rl: true, mode: 'id', value: id },
-					requirementsGranularity: 'model',
 				},
 				credentials,
 			},
 		);
 		expect(requirements.json).toHaveProperty('identifiers');
+		expect(requirements.json).toHaveProperty('defaultGranularity');
 	});
 
 	it('finds a passport by the code a webhook names', async () => {

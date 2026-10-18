@@ -88,14 +88,13 @@ const operations: INodePropertyOptions[] = [
 		value: 'getRequirements',
 		action: 'Get what a passport of a product needs',
 		description:
-			'Read which identifiers a passport of the product needs and what a publish would say about it today',
+			'Read which identifiers a passport of the product needs at the granularity the workspace issues, and what a publish would say about it today',
 		routing: {
 			request: {
 				method: 'GET',
 				url: '/dpps/requirements',
 				qs: {
 					productId: '={{$parameter.product}}',
-					granularity: '={{$parameter.requirementsGranularity || undefined}}',
 				},
 			},
 		},
@@ -199,7 +198,8 @@ const granularity: INodeProperties = {
 	],
 	default: '',
 	displayOptions: showFor(resource, writeOperations),
-	description: 'Which unit the passport stands for',
+	description:
+		'Which unit the passport stands for. A workspace issues its passports at one granularity and refuses any other, so pick that one or leave Workspace Default.',
 };
 
 const dynamicDataJson: INodeProperties = {
@@ -303,15 +303,6 @@ export const passportDescription: INodeProperties[] = [
 			},
 			identifierFields[1],
 		],
-	},
-	{
-		displayName: 'Granularity',
-		name: 'requirementsGranularity',
-		type: 'options',
-		options: granularity.options,
-		default: '',
-		displayOptions: showFor(resource, ['getRequirements']),
-		description: 'Which unit the passport would stand for',
 	},
 	{
 		displayName: 'Update Fields',
