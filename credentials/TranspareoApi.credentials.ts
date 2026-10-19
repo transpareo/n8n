@@ -1,7 +1,6 @@
 import {
 	UserError,
 	type ICredentialDataDecryptedObject,
-	type ICredentialTestRequest,
 	type ICredentialType,
 	type IHttpRequestHelper,
 	type IHttpRequestOptions,
@@ -9,12 +8,20 @@ import {
 	type INodeProperties,
 } from 'n8n-workflow';
 import { statusOf } from '../nodes/shared/transport';
-import { issuedFor, workspaceOrigin } from '../nodes/shared/workspace';
+import {
+	CLIENT_REFUSED,
+	CLIENT_REFUSED_HINT,
+	issuedFor,
+	tokenRequest,
+} from '../nodes/shared/workspace';
 
 type TokenAnswer = {
 	access_token: string;
 };
 
+// The connection test is `testConnection` (nodes/shared/connection.ts),
+// which every node names under `testedBy`: it names the switched-off
+// access groups, which a rule of a declarative test cannot.
 export class TranspareoApi implements ICredentialType {
 	name = 'transpareoApi';
 
@@ -74,30 +81,12 @@ export class TranspareoApi implements ICredentialType {
 	// stored token is empty and again when a request answers 401, so
 	// the token, which lives one hour, renews itself.
 	async preAuthentication(this: IHttpRequestHelper, credentials: ICredentialDataDecryptedObject) {
-		const origin = workspaceOrigin(credentials.workspaceUrl);
-		const form = new URLSearchParams({
-			grant_type: 'client_credentials',
-			client_id: String(credentials.clientId).trim(),
-			client_secret: String(credentials.clientSecret),
-		});
-		const options: IHttpRequestOptions = {
-			method: 'POST',
-			url: `${origin}/api/oauth/token`,
-			headers: {
-				'Content-Type': 'application/x-www-form-urlencoded',
-				Accept: 'application/json',
-			},
-			body: form.toString(),
-		};
 		let answer: TokenAnswer;
 		try {
-			answer = (await this.helpers.httpRequest(options)) as TokenAnswer;
+			answer = (await this.helpers.httpRequest(tokenRequest(credentials))) as TokenAnswer;
 		} catch (error) {
 			if (statusOf(error) !== 401) throw error;
-			throw new UserError('The workspace refused the client ID or the client secret', {
-				description:
-					'Check both against the API consumer in the application manager. A regenerated secret replaces the old one, and a suspended consumer is refused.',
-			});
+			throw new UserError(CLIENT_REFUSED, { description: CLIENT_REFUSED_HINT });
 		}
 
 		return {
@@ -121,27 +110,6 @@ export class TranspareoApi implements ICredentialType {
 
 		return { ...requestOptions, headers };
 	}
-
-	// `scope` lists the permissions the token may use. An empty list
-	// means the consumer may do nothing, so the test fails here,
-	// before a workflow runs into a refusal.
-	test: ICredentialTestRequest = {
-		request: {
-			baseURL: '={{$credentials.workspaceUrl.trim().replace(/\\/+$/, "")}}/api',
-			url: '/me',
-		},
-		rules: [
-			{
-				type: 'responseSuccessBody',
-				properties: {
-					key: 'scope.length',
-					value: 0,
-					message:
-						'The API consumer holds no permission. Add it to an access group in the application manager that grants what the workflows need.',
-				},
-			},
-		],
-	};
 }
 
 function currentOwner(credentials: ICredentialDataDecryptedObject): string {

@@ -1,52 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { INodeType } from 'n8n-workflow';
-import { TranspareoApi } from '../credentials/TranspareoApi.credentials';
 import { Transpareo } from '../nodes/Transpareo/Transpareo.node';
 import { FakeWorkspace } from './fake-workspace';
 import { runNode } from './harness';
-
-// The node n8n's credential tester builds around a credential's test
-// request: no parameters, the request as the credential declares it.
-function credentialTester(): INodeType {
-	const { request } = new TranspareoApi().test;
-	return {
-		description: {
-			displayName: 'Credential test',
-			name: 'credentialTest',
-			group: ['input'],
-			version: 1,
-			description: '',
-			defaults: { name: 'Credential test' },
-			inputs: ['main'],
-			outputs: ['main'],
-			credentials: [{ name: 'transpareoApi', required: true }],
-			requestDefaults: { baseURL: request.baseURL },
-			properties: [
-				{
-					displayName: 'Request',
-					name: 'request',
-					type: 'hidden',
-					default: '',
-					routing: { request: { url: request.url, method: request.method ?? 'GET' } },
-				},
-			],
-		},
-	} as INodeType;
-}
-
-// The message of the first body rule the answer trips, as n8n's
-// credential tester reads the rules: lodash `get` on the key, compared
-// with `===`. A dotted path reads the same here.
-function failedRule(body: object): string | undefined {
-	const rules = new TranspareoApi().test.rules ?? [];
-	const tripped = rules.find((rule) => {
-		if (rule.type !== 'responseSuccessBody') return false;
-		const path = rule.properties.key.split('.');
-		const value = path.reduce<unknown>((at, key) => (at as Record<string, unknown>)?.[key], body);
-		return value === rule.properties.value;
-	});
-	return tripped?.properties.message;
-}
 
 const node = new Transpareo();
 
@@ -59,43 +14,6 @@ describe('Transpareo product operations', () => {
 
 	afterEach(async () => {
 		await workspace.stop();
-	});
-
-	it('tests the credential with a token against what it allows', async () => {
-		workspace.on('GET', '/api/me', { body: { name: 'ERP integration', status: 'active' } });
-
-		const items = await runNode(credentialTester(), workspace, {
-			parameters: {},
-			credentials: { workspaceUrl: `${workspace.origin}/` },
-		});
-
-		expect(items[0].json).toEqual({ name: 'ERP integration', status: 'active' });
-		const [request] = workspace.apiRequests();
-		expect(request.path).toBe('/api/me');
-		expect(request.headers.authorization).toBe('Bearer token-1');
-	});
-
-	it('fails the credential test for a consumer that may do nothing', async () => {
-		workspace.on('GET', '/api/me', { body: { name: 'ERP integration', scope: [] } });
-
-		const items = await runNode(credentialTester(), workspace, {
-			parameters: {},
-			credentials: { workspaceUrl: `${workspace.origin}/` },
-		});
-
-		expect(failedRule(items[0].json)).toContain('holds no permission');
-	});
-
-	it('passes the credential test for a consumer holding a permission', async () => {
-		const body = { name: 'ERP integration', scope: ['product_access'] };
-		workspace.on('GET', '/api/me', { body });
-
-		const items = await runNode(credentialTester(), workspace, {
-			parameters: {},
-			credentials: { workspaceUrl: `${workspace.origin}/` },
-		});
-
-		expect(failedRule(items[0].json)).toBeUndefined();
 	});
 
 	it('gets a product by id with the token it exchanged first', async () => {

@@ -139,14 +139,4 @@ describe('TranspareoApi credential', () => {
 
 		expect(options.headers).toEqual({});
 	});
-
-	it('tests the credential against what the token allows', () => {
-		expect(credential.test.request.url).toBe('/me');
-		expect(credential.test.request.baseURL).toContain('$credentials.workspaceUrl');
-	});
-
-	it('fails the test on a token that may use no permission', () => {
-		const rule = credential.test.rules?.find((r) => r.type === 'responseSuccessBody');
-		expect(rule?.properties).toMatchObject({ key: 'scope.length', value: 0 });
-	});
 });

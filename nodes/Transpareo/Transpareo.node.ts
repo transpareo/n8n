@@ -1,4 +1,5 @@
 import { NodeConnectionTypes, type INodeType, type INodeTypeDescription } from 'n8n-workflow';
+import { credentialTest } from '../shared/connection';
 import { listSearch, loadOptions } from './methods';
 import { componentDescription } from './resources/component';
 import { lotDescription } from './resources/lot';
@@ -29,6 +30,7 @@ export class Transpareo implements INodeType {
 			{
 				name: 'transpareoApi',
 				required: true,
+				testedBy: 'transpareoApiTest',
 			},
 		],
 		// Every answer but a 401 reaches the operations, which raise a
@@ -81,6 +83,7 @@ export class Transpareo implements INodeType {
 	};
 
 	methods = {
+		credentialTest,
 		listSearch,
 		loadOptions,
 	};
