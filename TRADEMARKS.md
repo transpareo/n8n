@@ -21,4 +21,4 @@ You may not:
 
 If you distribute a modified version, give it its own name and make clear
 that it is not the release published by Transpareo. Questions about
-trademark use go to hello@transpareo.com.
+trademark use go to n8n@transpareo.com.

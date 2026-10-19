@@ -237,4 +237,4 @@ provenance statement.
 
 MIT, see [LICENSE](LICENSE). The Transpareo name and logo are covered
 by [TRADEMARKS.md](TRADEMARKS.md). Report security issues to
-<security@transpareo.com>.
+<n8n@transpareo.com>.

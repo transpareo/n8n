@@ -17,7 +17,7 @@ const sources = import.meta.glob(
 ) as Record<string, string>;
 
 const documents = import.meta.glob(
-	['../README.md', '../CHANGELOG.md', '../package.json', '../examples/*.json'],
+	['../README.md', '../CHANGELOG.md', '../TRADEMARKS.md', '../package.json', '../examples/*.json'],
 	{
 		query: '?raw',
 		import: 'default',
@@ -88,7 +88,18 @@ describe('the package as n8n loads it', () => {
 		const files = { ...sources, ...documents };
 		const offenders = Object.keys(files).filter((file) => banned.test(files[file]));
 
-		expect(Object.keys(documents)).toHaveLength(4);
+		expect(Object.keys(documents)).toHaveLength(5);
 		expect(offenders).toEqual([]);
+	});
+
+	it('names n8n@transpareo.com as its only address, for the author and every contact', () => {
+		const contact = 'n8n@transpareo.com';
+		const address = /[\w.%+-]+@[\w-]+(\.[\w-]+)+/g;
+		const named = Object.values(documents).flatMap((text) => text.match(address) ?? []);
+
+		expect(manifest.author.email).toBe(contact);
+		expect(documents['../README.md']).toContain(`<${contact}>`);
+		expect(documents['../TRADEMARKS.md']).toContain(contact);
+		expect(new Set(named)).toEqual(new Set([contact]));
 	});
 });
