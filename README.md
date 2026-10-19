@@ -83,6 +83,12 @@ at the next request.
 | Read or create tasks | `task_access` |
 | Use the Transpareo Trigger | `webhook_access` and `dpp_history` |
 
+An API consumer lists and reads the passports and lots it created
+itself. Passports created in the application manager, or by another
+consumer, stay out of **Passport Get Many** and the passport picker; a
+consumer connected through a consent screen sees those of the person
+who approved it as well.
+
 ### Errors
 
 A refused call shows the workspace's own message and code as the
@@ -110,15 +116,24 @@ Notes on a few of them:
   Since** and the order (newest first, or recently updated first).
 - **Product Create** names the brand and the components by name; a
   name the workspace does not know yet creates the brand or the
-  component. **Properties** take one row per value, with the property
-  types the workspace defines listed by name. A variant names its
-  parent under **Variant Of (Product ID)** and needs a name alone.
+  component. A product needs one component at least. **Properties**
+  take one row per value, with the property types the workspace
+  defines listed by name. A variant names its parent under **Variant
+  Of (Product ID)** and needs a name alone: it takes the brand and the
+  components of its parent.
 - **Passport** operations find a passport from a list, by its ID, or
   by the code printed on its label, the one webhook deliveries name.
 - **Get Requirements** tells which identifiers a passport of a product
-  needs and what a publish would report today. **Validate** checks a
-  passport as a publish would, without writing it. Both are worth a
-  step before **Create** and **Publish**.
+  needs and what a publish would report today. Its `missing` list
+  names what the product still lacks, one entry per open check: what
+  it is (`name`, and `propertyTypeId` for a property), whether a
+  passport waits on it (`required`), and where the answer goes
+  (`target` and `fields`, such as `gtin` or `propertiesInput` on
+  **Product Update**). `ready` is true once nothing required is left.
+  n8n's **Split Out** node on `missing` gives one item per entry, for a
+  task each. **Validate** checks a passport as a publish would,
+  without writing it. Both are worth a step before **Create** and
+  **Publish**.
 - **Publish** signs the passport and registers a version. A published
   passport cannot be taken back: its signed snapshot is archived and
   its address may already be printed on a label.

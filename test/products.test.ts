@@ -163,6 +163,19 @@ describe('Transpareo product operations', () => {
 		});
 	});
 
+	// The workspace refuses a product without a component, and a
+	// variant takes its parent's. An empty list still runs, so a
+	// variant is created with a name alone.
+	it('asks for the components of a new product', () => {
+		const field = node.description.properties.find((property) => {
+			const operations = property.displayOptions?.show?.operation ?? [];
+			return property.name === 'componentNames' && operations.includes('create');
+		});
+
+		expect(field?.required).toBe(true);
+		expect(field?.description).toContain('variant');
+	});
+
 	it('creates a variant from its parent with a name alone', async () => {
 		workspace.on('POST', '/api/products', { status: 201, body: { id: 13 } });
 

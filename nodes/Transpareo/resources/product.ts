@@ -148,7 +148,13 @@ export const productDescription: INodeProperties[] = [
 		description: 'The name of the product',
 	},
 	{ ...brandName, displayOptions: showFor(resource, ['create']) },
-	{ ...componentNames, displayOptions: showFor(resource, ['create']) },
+	{
+		...componentNames,
+		required: true,
+		displayOptions: showFor(resource, ['create']),
+		description:
+			'The components of the product in order, by name, one at least. A name no component carries yet creates the component. A variant takes the components of its parent and needs none.',
+	},
 	properties,
 	{
 		displayName: 'Additional Fields',

@@ -117,6 +117,30 @@ describe('Transpareo passport operations', () => {
 		expect(workspace.apiRequests()[0].query).toEqual({ productId: '11' });
 	});
 
+	// A workflow loops over `missing` with n8n's own nodes, so the
+	// answer comes out as the workspace sent it, as one item.
+	it('hands the requirements on as the workspace answers them', async () => {
+		const answer = {
+			granularity: 'batch',
+			ready: false,
+			missing: [
+				{ check: 'modelIdentifier', required: true, target: 'product', fields: ['gtin', 'mpn'] },
+				{ check: 'propertiesInput.804', required: true, propertyTypeId: 804 },
+			],
+		};
+		workspace.on('GET', '/api/dpps/requirements', { body: answer });
+
+		const items = await runNode(node, workspace, {
+			parameters: {
+				resource: 'passport',
+				operation: 'getRequirements',
+				product: { __rl: true, mode: 'list', value: '11' },
+			},
+		});
+
+		expect(items.map((item) => item.json)).toEqual([answer]);
+	});
+
 	it('offers no granularity for requirements, since the workspace refuses all but its own', () => {
 		const shown = node.description.properties.filter((property) => {
 			const show = property.displayOptions?.show;

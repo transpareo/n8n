@@ -88,7 +88,7 @@ const operations: INodePropertyOptions[] = [
 		value: 'getRequirements',
 		action: 'Get what a passport of a product needs',
 		description:
-			'Read which identifiers a passport of the product needs at the granularity the workspace issues, and what a publish would say about it today',
+			'Read which identifiers a passport of the product needs at the granularity the workspace issues, what the product still lacks and where each answer goes, and whether it is ready',
 		routing: {
 			request: {
 				method: 'GET',
