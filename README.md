@@ -228,7 +228,8 @@ npm run test:e2e
 
 It reads, validates, and creates one webhook subscription, which it
 removes again. Releases are published to npm from the `Publish`
-workflow of this repository with a provenance statement.
+workflow of this repository through npm trusted publishing, with a
+provenance statement.
 
 ## Licence
 
