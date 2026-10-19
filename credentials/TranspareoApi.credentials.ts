@@ -122,11 +122,25 @@ export class TranspareoApi implements ICredentialType {
 		return { ...requestOptions, headers };
 	}
 
+	// `scope` lists the permissions the token may use. An empty list
+	// means the consumer may do nothing, so the test fails here,
+	// before a workflow runs into a refusal.
 	test: ICredentialTestRequest = {
 		request: {
 			baseURL: '={{$credentials.workspaceUrl.trim().replace(/\\/+$/, "")}}/api',
 			url: '/me',
 		},
+		rules: [
+			{
+				type: 'responseSuccessBody',
+				properties: {
+					key: 'scope.length',
+					value: 0,
+					message:
+						'The API consumer holds no permission. Add it to an access group in the application manager that grants what the workflows need.',
+				},
+			},
+		],
 	};
 }
 
