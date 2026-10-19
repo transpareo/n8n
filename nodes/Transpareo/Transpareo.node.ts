@@ -31,12 +31,16 @@ export class Transpareo implements INodeType {
 				required: true,
 			},
 		],
+		// Every answer but a 401 reaches the operations, which raise a
+		// failed one with the workspace's own message (`raiseRefusal`).
+		// A 401 still throws, so n8n renews the token and sends again.
 		requestDefaults: {
 			baseURL: '={{$credentials.workspaceUrl.trim().replace(/\\/+$/, "")}}/api',
 			headers: {
 				Accept: 'application/json',
 				'Content-Type': 'application/json',
 			},
+			ignoreHttpStatusErrors: { ignore: true, except: [401] },
 		},
 		properties: [
 			{

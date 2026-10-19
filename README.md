@@ -82,8 +82,15 @@ at the next request.
 | Read or create tasks | `task_access` |
 | Use the Transpareo Trigger | `webhook_access` and `dpp_history` |
 
-A refused call names the permission it needs, so a missing one shows up
-in n8n's error message.
+### Errors
+
+A refused call shows the workspace's own message and code as the
+error, such as `Reading these records needs the product_access
+permission. (PRODUCT_FORBIDDEN)`. The details below it name each field
+the workspace refused with its own message and code, the workspace's
+hint and the reference page of the code. An AI Agent that uses the
+node as a tool reads the same message and details, so it can tell the
+person what to change.
 
 ## Operations
 
@@ -203,7 +210,10 @@ group, subject type Passport and subject ID `{{ $json.id }}`.
 ## Compatibility
 
 Built and tested with n8n 2.43 (`n8n-workflow` and `n8n-core`
-2.43.5). The nodes carry no runtime dependencies.
+2.43.5), and needs n8n 2.10 or later. The action node reads every
+failed answer itself except a 401, on which n8n renews the token; an
+n8n before 2.10 cannot set the 401 apart and would stop renewing the
+token after its first hour. The nodes carry no runtime dependencies.
 
 ## Development
 

@@ -71,7 +71,12 @@ describe('Transpareo Trigger subscription', () => {
 	});
 
 	it('explains a refused address and points to the polling trigger', async () => {
-		const refusal = Object.assign(apiError(422), { description: 'url must be https' });
+		const answer = {
+			error: 'WEBHOOK_INVALID',
+			message: 'The webhook is invalid.',
+			fields: { url: { error: 'WEBHOOK_URL_INVALID', message: 'must be https' } },
+		};
+		const refusal = Object.assign(apiError(422), { context: { data: answer } });
 		const { hooks } = hookContext({
 			parameters: { events: [], passportCodes: [] },
 			reply: () => {
@@ -79,7 +84,13 @@ describe('Transpareo Trigger subscription', () => {
 			},
 		});
 
-		await expect(methods.create.call(hooks)).rejects.toMatchObject({
+		const create = methods.create.call(hooks);
+
+		await expect(create).rejects.toMatchObject({
+			message: 'The webhook is invalid. (WEBHOOK_INVALID)',
+			description: expect.stringContaining('url: must be https (WEBHOOK_URL_INVALID)'),
+		});
+		await expect(create).rejects.toMatchObject({
 			description: expect.stringContaining('Transpareo Polling Trigger'),
 		});
 	});

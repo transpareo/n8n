@@ -116,13 +116,14 @@ describe('Transpareo product operations', () => {
 		expect(request.headers.accept).toContain('application/json');
 	});
 
-	// n8n shows the message of a refusal and leaves its hint out, so
-	// the workspace names the permission in the message.
-	it('shows the permission a refused list names', async () => {
+	// The workspace's own message and code head the error, so n8n and
+	// an agent using the node as a tool read what to fix first.
+	it('heads a refusal with the message and the code of the workspace', async () => {
 		const refusal = {
 			error: 'PRODUCT_FORBIDDEN',
 			message: 'Reading these records needs the product_access permission.',
 			hint: 'This credential holds: dpp_read. Ask the administrator to grant product_access to the API consumer.',
+			docsUrl: 'https://acme.example.com/apidocs/errors#PRODUCT_FORBIDDEN',
 		};
 		workspace.on('GET', '/api/products', { status: 403, body: refusal });
 
@@ -131,7 +132,56 @@ describe('Transpareo product operations', () => {
 		});
 
 		await expect(run).rejects.toMatchObject({
-			description: expect.stringContaining('product_access'),
+			message: 'Reading these records needs the product_access permission. (PRODUCT_FORBIDDEN)',
+			description: expect.stringContaining('This credential holds: dpp_read.'),
+		});
+	});
+
+	it('names each field a refused write names', async () => {
+		const refusal = {
+			error: 'PRODUCT_INVALID',
+			message: 'The product is invalid.',
+			fields: {
+				componentsInput: {
+					error: 'PRODUCT_COMPONENTS_INPUT_EMPTY',
+					message: 'Components input missing',
+					fullMessage: 'Components Components input missing',
+				},
+			},
+		};
+		workspace.on('POST', '/api/products', { status: 422, body: refusal });
+
+		const run = runNode(node, workspace, {
+			parameters: {
+				resource: 'product',
+				operation: 'create',
+				name: 'Face Cream',
+				brandName: 'NaturaCare',
+				componentNames: [],
+			},
+		});
+
+		await expect(run).rejects.toMatchObject({
+			message: 'The product is invalid. (PRODUCT_INVALID)',
+			description: expect.stringContaining(
+				'componentsInput: Components input missing (PRODUCT_COMPONENTS_INPUT_EMPTY)',
+			),
+		});
+	});
+
+	it("keeps n8n's own wording for an answer without a message", async () => {
+		workspace.on('GET', '/api/products/11', { status: 502, body: { status: 502 } });
+
+		const run = runNode(node, workspace, {
+			parameters: {
+				resource: 'product',
+				operation: 'get',
+				product: { __rl: true, mode: 'id', value: '11' },
+			},
+		});
+
+		await expect(run).rejects.toMatchObject({
+			message: 'Bad gateway - the service failed to handle your request',
 		});
 	});
 

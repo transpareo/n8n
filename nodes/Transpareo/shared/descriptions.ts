@@ -1,9 +1,20 @@
 import type { IDisplayOptions, INodeProperties, INodePropertyOptions } from 'n8n-workflow';
+import { raiseRefusal } from '../../shared/transport';
 
 export function showFor(resource: string, operations?: string[]): IDisplayOptions {
 	const show: IDisplayOptions['show'] = { resource: [resource] };
 	if (operations) show.operation = operations;
 	return { show };
+}
+
+// Every operation raises a failed answer with the workspace's own
+// message before its own steps read the answer.
+function raisingRefusals(option: INodePropertyOptions): INodePropertyOptions {
+	const routing = option.routing ?? {};
+	const steps = routing.output?.postReceive ?? [];
+	const output = { ...routing.output, postReceive: [raiseRefusal, ...steps] };
+
+	return { ...option, routing: { ...routing, output } };
 }
 
 export function operationProperty(
@@ -17,7 +28,7 @@ export function operationProperty(
 		type: 'options',
 		noDataExpression: true,
 		displayOptions: showFor(resource),
-		options,
+		options: options.map(raisingRefusals),
 		default: defaultOperation,
 	};
 }

@@ -26,6 +26,32 @@ describe('Transpareo list searches', () => {
 		expect(result.paginationToken).toBe('3');
 	});
 
+	// The list searches and option lists call the API themselves, so
+	// a refusal reads the same there as on an operation.
+	it("heads a refused search with the workspace's message", async () => {
+		const answer = {
+			error: 'DPP_FORBIDDEN',
+			message: 'Reading these records needs the dpp_read permission.',
+			hint: 'This credential holds: product_access.',
+		};
+		const refusal = Object.assign(new Error('Forbidden'), {
+			httpCode: '403',
+			context: { data: answer },
+		});
+		const { context } = fakeContext({
+			reply: () => {
+				throw refusal;
+			},
+		});
+
+		const search = listSearch.searchPassports.call(asLoadOptions(context), 'A1');
+
+		await expect(search).rejects.toMatchObject({
+			message: 'Reading these records needs the dpp_read permission. (DPP_FORBIDDEN)',
+			description: 'This credential holds: product_access.',
+		});
+	});
+
 	it('stops paging when a page comes back short', async () => {
 		const { context } = fakeContext({ reply: () => ({ components: [{ id: 4, name: 'Aqua' }] }) });
 

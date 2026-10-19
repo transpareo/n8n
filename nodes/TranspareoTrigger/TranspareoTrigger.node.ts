@@ -10,8 +10,11 @@ import {
 	type JsonObject,
 } from 'n8n-workflow';
 import { VERSIONED_EVENTS } from '../shared/events';
-import { apiRequest, statusOf } from '../shared/transport';
+import { apiRequest, refusalOf, statusOf } from '../shared/transport';
 import { verifySignature } from './signature';
+
+const PUBLIC_ADDRESSES_ONLY =
+	'Transpareo delivers to public https addresses only, at most ten per credential. Where n8n runs on a private address, use the Transpareo Polling Trigger.';
 
 type Subscription = {
 	id: number;
@@ -137,10 +140,7 @@ export class TranspareoTrigger implements INodeType {
 					})) as Subscription;
 				} catch (error) {
 					if (statusOf(error) !== 422) throw new NodeApiError(this.getNode(), error as JsonObject);
-					throw new NodeApiError(this.getNode(), error as JsonObject, {
-						description:
-							'Transpareo delivers to public https addresses only, at most ten per credential. Where n8n runs on a private address, use the Transpareo Polling Trigger.',
-					});
+					throw refusalOf(this.getNode(), error, PUBLIC_ADDRESSES_ONLY);
 				}
 
 				const staticData = this.getWorkflowStaticData('node');
