@@ -133,12 +133,14 @@ Notes on a few of them:
   names what the product still lacks, one entry per open check: what
   it is (`name`, and `propertyTypeId` for a property), whether a
   passport waits on it (`required`), and where the answer goes
-  (`target` and `fields`, such as `gtin` or `propertiesInput` on
-  **Product Update**). `ready` is true once nothing required is left.
-  n8n's **Split Out** node on `missing` gives one item per entry, for a
-  task each. **Validate** checks a passport as a publish would,
-  without writing it. Both are worth a step before **Create** and
-  **Publish**.
+  (`target` and `fields`, such as `gtin`, `mpn` or `propertiesInput`
+  on **Product Update**, where `mpn` is the **Article Number (MPN)**:
+  a passport takes its model identifier from the GTIN, or from the
+  article number where the product has none). `ready` is true once
+  nothing required is left. n8n's **Split Out** node on `missing`
+  gives one item per entry, for a task each. **Validate** checks a
+  passport as a publish would, without writing it. Both are worth a
+  step before **Create** and **Publish**.
 - **Publish** signs the passport and registers a version. A published
   passport cannot be taken back: its signed snapshot is archived and
   its address may already be printed on a label.

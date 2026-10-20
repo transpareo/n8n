@@ -49,6 +49,15 @@ const gtin: INodeProperties = {
 	description: 'The Global Trade Item Number of the product',
 };
 
+const mpn: INodeProperties = {
+	displayName: 'Article Number (MPN)',
+	name: 'mpn',
+	type: 'string',
+	default: '',
+	description:
+		'The article number (Manufacturer Part Number) the maker gives the product. A passport takes its model identifier from the GTIN, or from this where the product has no GTIN.',
+};
+
 const categoryIds: INodeProperties = {
 	displayName: 'Category Names or IDs',
 	name: 'categoryIds',
@@ -164,7 +173,7 @@ export const productDescription: INodeProperties[] = [
 		placeholder: 'Add Field',
 		displayOptions: showFor(resource, ['create']),
 		default: {},
-		options: [categoryIds, gtin, parentId],
+		options: [mpn, categoryIds, gtin, parentId],
 	},
 	{
 		displayName: 'Update Fields',
@@ -174,6 +183,7 @@ export const productDescription: INodeProperties[] = [
 		displayOptions: showFor(resource, ['update']),
 		default: {},
 		options: [
+			mpn,
 			brandName,
 			categoryIds,
 			componentNames,

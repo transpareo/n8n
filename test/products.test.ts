@@ -316,6 +316,33 @@ describe('Transpareo product operations', () => {
 		expect(JSON.parse(request.body)).toEqual({ product: { componentsInput: names } });
 	});
 
+	// Get Requirements names gtin and mpn as the fields a missing model
+	// identifier is answered with, so both are offered where GTIN is.
+	it('writes the article number of a product beside its GTIN', async () => {
+		workspace.on('PUT', '/api/products/12', { body: { id: 12 } });
+
+		await runNode(node, workspace, {
+			parameters: {
+				resource: 'product',
+				operation: 'update',
+				product: { __rl: true, mode: 'id', value: '12' },
+				updateFields: { gtin: '4006381333931', mpn: 'FC-50' },
+			},
+		});
+
+		const [request] = workspace.apiRequests();
+		const product = { gtin: '4006381333931', mpn: 'FC-50' };
+		expect(JSON.parse(request.body)).toEqual({ product });
+		for (const collection of ['additionalFields', 'updateFields']) {
+			const field = node.description.properties.find((property) => {
+				const resources = property.displayOptions?.show?.resource ?? [];
+				return property.name === collection && resources.includes('product');
+			});
+			const names = (field?.options ?? []).map((option) => option.name);
+			expect(names).toEqual(expect.arrayContaining(['gtin', 'mpn']));
+		}
+	});
+
 	it('lists products up to the limit with the filters and the order', async () => {
 		const products = [{ id: 3 }, { id: 2 }];
 		workspace.on('GET', '/api/products', { body: { products } });

@@ -143,6 +143,7 @@ export async function productBody(
 		name: fields.name,
 		componentsInput: componentsInput(rawNames, fields.componentNames),
 		gtin: fields.gtin,
+		mpn: fields.mpn,
 		parentId: fields.parentId || undefined,
 		categoryIds: fields.categoryIds,
 		propertiesInput: rows.length > 0 ? propertiesInput(rows) : undefined,
