@@ -116,11 +116,16 @@ Notes on a few of them:
   Since** and the order (newest first, or recently updated first).
 - **Product Create** names the brand and the components by name; a
   name the workspace does not know yet creates the brand or the
-  component. A product needs one component at least. **Properties**
-  take one row per value, with the property types the workspace
-  defines listed by name. A variant names its parent under **Variant
-  Of (Product ID)** and needs a name alone: it takes the brand and the
-  components of its parent.
+  component. A product needs one component at least. In **Component
+  Names** a row typed by hand is one name; an expression in a row, such
+  as `{{ $json.components }}`, gives several: an array, or a text with
+  one name per line or, without line breaks, one between commas. A
+  comma between two digits, as in `1,2-Hexanediol`, stays in the name,
+  and one name with a comma in it goes through whole as an array of
+  one, `{{ [$json.name] }}`. **Properties** take one row per value,
+  with the property types the workspace defines listed by name. A
+  variant names its parent under **Variant Of (Product ID)** and needs
+  a name alone: it takes the brand and the components of its parent.
 - **Passport** operations find a passport from a list, by its ID, or
   by the code printed on its label, the one webhook deliveries name.
 - **Get Requirements** tells which identifiers a passport of a product

@@ -176,6 +176,89 @@ describe('Transpareo product operations', () => {
 		expect(field?.description).toContain('variant');
 	});
 
+	it('takes the components of a new product from a list one expression gives', async () => {
+		workspace.on('POST', '/api/products', { status: 201, body: { id: 12 } });
+
+		await runNode(node, workspace, {
+			parameters: {
+				resource: 'product',
+				operation: 'create',
+				name: 'Face Cream',
+				brandName: 'NaturaCare',
+				componentNames: '={{ $json.components }}',
+			},
+			input: [{ components: ['Aqua', 'Glycerin'] }, { components: 'Aqua, Parfum' }],
+		});
+
+		const names = workspace.apiRequests().map((request) => {
+			return JSON.parse(request.body).product.componentsInput;
+		});
+		expect(names).toEqual([
+			['Aqua', 'Glycerin'],
+			['Aqua', 'Parfum'],
+		]);
+	});
+
+	it('takes the components from a comma-separated text in one row', async () => {
+		workspace.on('POST', '/api/products', { status: 201, body: { id: 12 } });
+
+		await runNode(node, workspace, {
+			parameters: {
+				resource: 'product',
+				operation: 'create',
+				name: 'Face Cream',
+				brandName: 'NaturaCare',
+				componentNames: ['={{ $json.components }}'],
+			},
+			input: [{ components: 'Aqua, Glycerin,Parfum' }],
+		});
+
+		const [request] = workspace.apiRequests();
+		const body = JSON.parse(request.body);
+		expect(body.product.componentsInput).toEqual(['Aqua', 'Glycerin', 'Parfum']);
+	});
+
+	// A text with line breaks gives one name per line, so a name with a
+	// comma in it comes through whole.
+	it('takes one component per line of a text an expression gives', async () => {
+		workspace.on('POST', '/api/products', { status: 201, body: { id: 12 } });
+
+		await runNode(node, workspace, {
+			parameters: {
+				resource: 'product',
+				operation: 'create',
+				name: 'Face Cream',
+				brandName: 'NaturaCare',
+				componentNames: ['={{ $json.components }}'],
+			},
+			input: [{ components: 'Aqua\r\nCotton, organic\n\n' }],
+		});
+
+		const [request] = workspace.apiRequests();
+		const body = JSON.parse(request.body);
+		expect(body.product.componentsInput).toEqual(['Aqua', 'Cotton, organic']);
+	});
+
+	it('keeps a comma between two digits inside the name', async () => {
+		workspace.on('POST', '/api/products', { status: 201, body: { id: 12 } });
+
+		await runNode(node, workspace, {
+			parameters: {
+				resource: 'product',
+				operation: 'create',
+				name: 'Face Cream',
+				brandName: 'NaturaCare',
+				componentNames: ['={{ $json.components }}'],
+			},
+			input: [{ components: 'Aqua,1,2-Hexanediol, 2,4-Dichlorobenzyl Alcohol' }],
+		});
+
+		const [request] = workspace.apiRequests();
+		const body = JSON.parse(request.body);
+		const names = ['Aqua', '1,2-Hexanediol', '2,4-Dichlorobenzyl Alcohol'];
+		expect(body.product.componentsInput).toEqual(names);
+	});
+
 	it('creates a variant from its parent with a name alone', async () => {
 		workspace.on('POST', '/api/products', { status: 201, body: { id: 13 } });
 
@@ -213,6 +296,24 @@ describe('Transpareo product operations', () => {
 			product: { name: 'Face Cream Rich' },
 			brand: { name: 'NaturaCare' },
 		});
+	});
+
+	it('keeps a typed row whole and spreads the list a row expression gives', async () => {
+		workspace.on('PUT', '/api/products/12', { body: { id: 12 } });
+
+		await runNode(node, workspace, {
+			parameters: {
+				resource: 'product',
+				operation: 'update',
+				product: { __rl: true, mode: 'id', value: '12' },
+				updateFields: { componentNames: ['Cotton, organic', '={{ $json.more }}'] },
+			},
+			input: [{ more: ['Aqua', 'Glycerin'] }],
+		});
+
+		const [request] = workspace.apiRequests();
+		const names = ['Cotton, organic', 'Aqua', 'Glycerin'];
+		expect(JSON.parse(request.body)).toEqual({ product: { componentsInput: names } });
 	});
 
 	it('lists products up to the limit with the filters and the order', async () => {

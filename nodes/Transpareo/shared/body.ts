@@ -35,6 +35,30 @@ export function propertiesInput(rows: PropertyRow[]): IDataObject {
 	return Object.fromEntries(entries);
 }
 
+// A comma parts two names, except one between two digits, as the
+// locants of 1,2-Hexanediol.
+const NAME_COMMA = /(?<!\d),|,(?!\d)/;
+
+// The components as `componentsInput` takes them, from the raw rows and
+// what they resolve to. A row typed by hand is one name. An expression
+// gives the names of the list it resolves to, or of its text: one per
+// line where it has line breaks, else one between commas.
+export function componentsInput(raw: unknown, resolved: unknown): unknown[] {
+	const inRows = Array.isArray(raw) && Array.isArray(resolved);
+	const rows = inRows ? raw : [raw];
+	const values = inRows ? resolved : [resolved];
+	const names = values.flatMap((value, index) => {
+		const row = rows[index];
+		const typed = typeof row === 'string' && !row.startsWith('=');
+		if (Array.isArray(value)) return value;
+		if (typeof value !== 'string' || typed) return [value];
+		return value.split(value.includes('\n') ? '\n' : NAME_COMMA);
+	});
+	return names
+		.map((name) => (typeof name === 'string' ? name.trim() : name))
+		.filter((name) => name !== undefined && name !== null && name !== '');
+}
+
 export function setBody(
 	requestOptions: IHttpRequestOptions,
 	body: IDataObject,
@@ -111,10 +135,13 @@ export async function productBody(
 			: {};
 	const fields = writeFields(this, required);
 	const rows = this.getNodeParameter('properties.property', []) as PropertyRow[];
+	const parameters = this.getNode().parameters;
+	const written = operation === 'create' ? parameters : parameters.updateFields;
+	const rawNames = (written as IDataObject | undefined)?.componentNames;
 
 	const product = compact({
 		name: fields.name,
-		componentsInput: fields.componentNames,
+		componentsInput: componentsInput(rawNames, fields.componentNames),
 		gtin: fields.gtin,
 		parentId: fields.parentId || undefined,
 		categoryIds: fields.categoryIds,

@@ -20,14 +20,16 @@ const brandName: INodeProperties = {
 		"The brand of the product. A name no brand carries yet creates the brand. A variant takes its parent's brand when this is empty.",
 };
 
+const listInRow =
+	'A row typed by hand is one name. An expression in a row gives several: an array, or a text with one name per line or between commas.';
+
 const componentNames: INodeProperties = {
 	displayName: 'Component Names',
 	name: 'componentNames',
 	type: 'string',
 	typeOptions: { multipleValues: true, multipleValueButtonText: 'Add Component' },
 	default: [],
-	description:
-		'The components of the product in order, by name. A name no component carries yet creates the component. On an update the list replaces the one the product has.',
+	description: `The components of the product in order, by name. A name no component carries yet creates the component. On an update the list replaces the one the product has. ${listInRow}`,
 };
 
 const parentId: INodeProperties = {
@@ -152,8 +154,7 @@ export const productDescription: INodeProperties[] = [
 		...componentNames,
 		required: true,
 		displayOptions: showFor(resource, ['create']),
-		description:
-			'The components of the product in order, by name, one at least. A name no component carries yet creates the component. A variant takes the components of its parent and needs none.',
+		description: `The components of the product in order, by name, one at least. A name no component carries yet creates the component. A variant takes the components of its parent and needs none. ${listInRow}`,
 	},
 	properties,
 	{
