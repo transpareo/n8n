@@ -77,6 +77,22 @@ describe('the package as n8n loads it', () => {
 		expect(documents['../README.md']).toContain(`enter \`${manifest.name}\``);
 	});
 
+	// Two imports scale to a catalogue of any size the importer takes,
+	// since a passport row finds its product by GTIN: no product list
+	// is paged through to learn IDs.
+	it('imports the products and then their passports in the bulk upload example', () => {
+		const example = JSON.parse(documents['../examples/bulk-upload.json']);
+		const nodes = example.nodes as Array<{ type: string; parameters: Record<string, string> }>;
+		const ours = nodes.filter((one) => one.type === `${manifest.name}.transpareo`);
+		const steps = ours.map((one) => {
+			const { resource, operation, dataType } = one.parameters;
+			return `${resource}.${operation}.${dataType}`;
+		});
+
+		expect(nodes[1].type).toBe('n8n-nodes-base.readWriteFile');
+		expect(steps).toEqual(['import.run.products', 'import.run.dpps']);
+	});
+
 	it('has no runtime dependencies', () => {
 		expect((manifest as { dependencies?: object }).dependencies ?? {}).toEqual({});
 		expect(Object.keys(manifest.peerDependencies)).toEqual(['n8n-workflow']);
@@ -88,7 +104,7 @@ describe('the package as n8n loads it', () => {
 		const files = { ...sources, ...documents };
 		const offenders = Object.keys(files).filter((file) => banned.test(files[file]));
 
-		expect(Object.keys(documents)).toHaveLength(5);
+		expect(Object.keys(documents)).toHaveLength(6);
 		expect(offenders).toEqual([]);
 	});
 

@@ -1,0 +1,96 @@
+{
+	"name": "Bulk upload from a spreadsheet",
+	"nodes": [
+		{
+			"parameters": {},
+			"id": "3a9f2c41-6b7d-4e18-a2c5-9d0e1f2a3b01",
+			"name": "Start",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [0, 0]
+		},
+		{
+			"parameters": {
+				"fileSelector": "/data/catalogue.csv",
+				"options": {}
+			},
+			"id": "3a9f2c41-6b7d-4e18-a2c5-9d0e1f2a3b02",
+			"name": "Read CSV",
+			"type": "n8n-nodes-base.readWriteFile",
+			"typeVersion": 1,
+			"position": [240, 0]
+		},
+		{
+			"parameters": {
+				"resource": "import",
+				"operation": "run",
+				"dataType": "products",
+				"source": "binary",
+				"binaryPropertyName": "data",
+				"waitForCompletion": true,
+				"unmatchedColumns": "stop",
+				"importOptions": {}
+			},
+			"id": "3a9f2c41-6b7d-4e18-a2c5-9d0e1f2a3b03",
+			"name": "Import Products",
+			"type": "@transpareo/n8n-nodes-transpareo.transpareo",
+			"typeVersion": 1,
+			"position": [480, 0],
+			"credentials": {
+				"transpareoApi": {
+					"id": "",
+					"name": "Transpareo API"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"fileSelector": "/data/catalogue.csv",
+				"options": {}
+			},
+			"id": "3a9f2c41-6b7d-4e18-a2c5-9d0e1f2a3b04",
+			"name": "Read CSV Again",
+			"type": "n8n-nodes-base.readWriteFile",
+			"typeVersion": 1,
+			"position": [720, 0]
+		},
+		{
+			"parameters": {
+				"resource": "import",
+				"operation": "run",
+				"dataType": "dpps",
+				"source": "binary",
+				"binaryPropertyName": "data",
+				"waitForCompletion": true,
+				"unmatchedColumns": "skip",
+				"importOptions": {}
+			},
+			"id": "3a9f2c41-6b7d-4e18-a2c5-9d0e1f2a3b05",
+			"name": "Import Passports",
+			"type": "@transpareo/n8n-nodes-transpareo.transpareo",
+			"typeVersion": 1,
+			"position": [960, 0],
+			"credentials": {
+				"transpareoApi": {
+					"id": "",
+					"name": "Transpareo API"
+				}
+			}
+		}
+	],
+	"connections": {
+		"Start": {
+			"main": [[{ "node": "Read CSV", "type": "main", "index": 0 }]]
+		},
+		"Read CSV": {
+			"main": [[{ "node": "Import Products", "type": "main", "index": 0 }]]
+		},
+		"Import Products": {
+			"main": [[{ "node": "Read CSV Again", "type": "main", "index": 0 }]]
+		},
+		"Read CSV Again": {
+			"main": [[{ "node": "Import Passports", "type": "main", "index": 0 }]]
+		}
+	},
+	"settings": {}
+}

@@ -12,7 +12,7 @@ or changed.
 The package holds three nodes:
 
 - **Transpareo** reads and writes products, components, passports, lots
-  and tasks.
+  and tasks, and imports spreadsheets.
 - **Transpareo Trigger** starts a workflow the moment a passport
   registers a version. Transpareo calls n8n through a signed webhook.
 - **Transpareo Polling Trigger** checks the workspace on a schedule for
@@ -77,6 +77,8 @@ at the next request.
 | Create, update or validate passports | `dpp_write` |
 | Publish or correct passports | `dpp_write` and `dpp_publish` |
 | Append events | `dpp_events`; a sealed status change also `dpp_publish` |
+| Create many passports at once | `dpp_bulk_write` and `dpp_publish` |
+| Run or revert imports | `import_access` at **Full access**, and the write permission of what is imported: `product_access`, `component_write` or `dpp_bulk_write`; reading one takes `import_access` alone |
 | Update dynamic data | `dpp_dynamic` |
 | Read a passport's events, or poll the event feed | `dpp_history` |
 | Reissue passports | `dpp_lifecycle` and `dpp_write` |
@@ -105,9 +107,10 @@ person what to change.
 |---|---|
 | Product | Create, Get, Get Many, Update |
 | Component | Create, Get, Get Many, Update |
-| Passport | Append Event, Correct, Create, Get, Get Events, Get Many, Get Requirements, Get Versions, Publish, Reissue, Update, Update Dynamic Data, Validate |
+| Passport | Append Event, Correct, Create, Create Many, Get, Get Events, Get Many, Get Requirements, Get Versions, Publish, Reissue, Update, Update Dynamic Data, Validate |
 | Lot | Get, Get Many |
 | Task | Create, Get, Get Assignees, Get Many |
+| Import | Get, Revert, Run |
 
 Notes on a few of them:
 
@@ -151,6 +154,54 @@ Notes on a few of them:
 - **Task Create** asks a person or an access group for something,
   optionally about one product, component, passport or lot. Tasks are
   decided by people in the application manager.
+
+### Bulk operations
+
+Every other operation sends one request per item, and an API consumer
+may send 1,000 requests an hour. For thousands of records, use these
+two:
+
+- **Passport Create Many** creates and publishes one passport per input
+  item. The fields are those of **Create**, read for each item, so the
+  product is usually an expression such as `{{ $json.id }}` on **By
+  ID**. **Shared Fields (JSON)** under **Bulk Options** carries fields
+  every row takes unless it names its own. The node sends the rows in
+  calls of at most 50,000 rows and 25 MB, and no more rows a call than
+  the consumer's **Bulk DPPs per minute** in the application manager
+  (5,000 unless changed), since the workspace refuses a larger call.
+  Between calls it waits as long as the workspace asks. With **Wait for
+  Completion** it returns one item per input item: `created`,
+  `duplicate` or `error` with the code, the message and the fields the
+  workspace refused. The workspace lists the rejected rows of a call
+  and counts the rest, so a row of a call that both created passports
+  and found existing ones comes back as `published`; where the
+  workspace did not tie every rejected row to its row, the other rows
+  of that call say `unknown`. Sending the same rows again is safe: a
+  row whose passport is published comes back as `duplicate`. Without
+  waiting, it returns one item per call with its task ID and status
+  URL. A workspace that reviews every publish refuses Create Many,
+  since it publishes what it creates.
+- **Import Run** runs a spreadsheet through the workspace's importer,
+  as the application manager does: upload, map the columns, validate,
+  import. The rows come from a binary file of each input item (CSV,
+  XLSX, ODS or JSON, such as from **Read/Write Files from Disk** or
+  **HTTP Request**), or from the input items themselves, sent as one
+  JSON file. A file holds at most 50 MB, 100,000 rows and 2,000,000
+  cells. Each column takes the mapping the workspace suggests;
+  **Column Mappings** sets another, and **Unmatched Columns** decides
+  what happens to a column the workspace matches to nothing: stop and
+  name it, skip it, or create a property type for it. Rows the
+  validation refuses stop the node before anything is written, with the
+  causes counted and the first failing rows. With **Wait for
+  Completion** it returns the import with its counts (created, updated,
+  unchanged, failed), its row errors and its ID, which **Import
+  Revert** takes to restore the backup the import made. The workspace
+  imports no more rows at once than the consumer may write a minute,
+  so a larger file needs a higher **Bulk DPPs per minute**, which caps
+  imports of every data type; the node
+  says so before it starts the import. A passport import (data type
+  **Passports**) finds each row's product by its GTIN, so a sheet of
+  passports needs no product IDs.
 
 Voiding and superseding a passport, deleting records and the
 storefront's publication of products and components are left out of
@@ -223,6 +274,17 @@ with **Product Created**; Transpareo with Passport, Validate, Product
 By ID `{{ $json.id }}`; an IF node on `{{ $json.valid }}`; Transpareo
 with Passport, Create and then Publish, By Code
 `{{ $json.code }}`.
+
+**Load a catalogue and issue its passports.** Manual Trigger; **Read/Write
+Files from Disk** reading the CSV; Transpareo with Import, Run, data
+type Products; the same file read again, since an import hands on its
+counts and leaves the file behind; Transpareo with Import, Run, data
+type Passports and **Unmatched Columns** set to Skip, which finds each
+row's product by its GTIN. Two imports cost a handful of requests
+however long the catalogue, up to 100,000 rows a file.
+[examples/bulk-upload.json](examples/bulk-upload.json) imports it.
+Rows that already carry product IDs, such as from an ERP that keeps
+them, go to **Passport Create Many** instead.
 
 **Ask quality to check a recalled unit.** Transpareo Trigger with the
 event **Lifecycle Transition**; Transpareo with Passport, Get, By Code
