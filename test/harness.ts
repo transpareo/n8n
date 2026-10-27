@@ -93,6 +93,8 @@ export type RunOptions = {
 	parameters: Record<string, NodeParameterValueType | object>;
 	credentials?: ICredentialDataDecryptedObject;
 	input?: IDataObject[];
+	binary?: Array<INodeExecutionData['binary']>;
+	settings?: Pick<INode, 'onError'>;
 };
 
 // Runs one node of the package through n8n's own workflow engine, so the
@@ -129,6 +131,7 @@ export async function runNode(
 		position: [0, 0],
 		parameters: options.parameters as INode['parameters'],
 		credentials: { [credentialType.name]: { id: '1', name: 'Transpareo' } },
+		...options.settings,
 	};
 	const nodeTypes: INodeTypes = {
 		getByName: () => nodeType,
@@ -174,7 +177,10 @@ export async function runNode(
 		logAiEvent: () => {},
 	} as unknown as IWorkflowExecuteAdditionalData;
 
-	const input = (options.input ?? [{}]).map((json) => ({ json }));
+	const input = (options.input ?? [{}]).map((json, index) => {
+		const binary = options.binary?.[index];
+		return binary ? { json, binary } : { json };
+	});
 	const execute = new WorkflowExecute(additionalData, 'manual');
 	const run: IRun = await execute.run({
 		workflow,

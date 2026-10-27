@@ -1,6 +1,8 @@
 import {
 	NodeApiError,
+	sleep,
 	type IDataObject,
+	type IExecuteFunctions,
 	type IExecuteSingleFunctions,
 	type IHookFunctions,
 	type IHttpRequestMethods,
@@ -20,9 +22,23 @@ type Context = IExecuteSingleFunctions | IHookFunctions | ILoadOptionsFunctions 
 
 type RequestOptions = {
 	qs?: IDataObject;
-	body?: IDataObject;
+	body?: IDataObject | string | Buffer;
+	headers?: IDataObject;
 	fullResponse?: boolean;
 };
+
+type PatientOptions = RequestOptions & {
+	// A note of the node's own under the workspace's message, by the
+	// code the workspace refused with.
+	notes?: Record<string, string>;
+};
+
+// A 429 asking for a wait this long or shorter, as the per-minute item
+// cap does, is waited out. The hourly request cap asks for an hour,
+// which no workflow should sit through.
+const LONGEST_WAIT_SECONDS = 120;
+
+const ATTEMPTS = 5;
 
 type Field = {
 	error?: string;
@@ -144,5 +160,66 @@ export async function apiRequest(
 		return await this.helpers.httpRequestWithAuthentication.call(this, CREDENTIAL_TYPE, request);
 	} catch (error) {
 		throw refusalOf(this.getNode(), error);
+	}
+}
+
+// One call of a custom operation with the whole answer. Every status
+// but 401 comes back, as the action node's requests do, so a 401 still
+// throws and n8n renews the token and sends again.
+export async function apiResponse(
+	this: IExecuteFunctions,
+	method: IHttpRequestMethods,
+	path: string,
+	options: RequestOptions = {},
+): Promise<IN8nHttpFullResponse> {
+	const credentials = await this.getCredentials(CREDENTIAL_TYPE);
+	const request: IHttpRequestOptions = {
+		method,
+		url: `${workspaceOrigin(credentials.workspaceUrl)}/api${path}`,
+		headers: { Accept: 'application/json', ...options.headers },
+		qs: options.qs,
+		body: options.body,
+		json: true,
+		returnFullResponse: true,
+		ignoreHttpStatusErrors: { ignore: true, except: [401] },
+	};
+
+	try {
+		return await this.helpers.httpRequestWithAuthentication.call(this, CREDENTIAL_TYPE, request);
+	} catch (error) {
+		throw refusalOf(this.getNode(), error);
+	}
+}
+
+// The seconds a 429 asks to wait, where it asks for a short wait.
+function shortWait(response: IN8nHttpFullResponse): number | undefined {
+	if (response.statusCode !== 429) return undefined;
+
+	const seconds = Number(response.headers['retry-after']);
+	if (!Number.isFinite(seconds) || seconds > LONGEST_WAIT_SECONDS) return undefined;
+	return Math.max(seconds, 1);
+}
+
+// A call of a bulk operation. A 429 that asks for a short wait is
+// waited out and sent again; any other failed answer raises the
+// workspace's own message.
+export async function patientRequest(
+	this: IExecuteFunctions,
+	method: IHttpRequestMethods,
+	path: string,
+	options: PatientOptions = {},
+): Promise<IDataObject> {
+	for (let attempt = 1; ; attempt += 1) {
+		const response = await apiResponse.call(this, method, path, options);
+		const wait = shortWait(response);
+		if (wait && attempt < ATTEMPTS) {
+			await sleep(wait * 1000, this.getExecutionCancelSignal());
+			continue;
+		}
+		if (response.statusCode < 400) return response.body as IDataObject;
+
+		const code = answerOf(response.body).error ?? '';
+		const note = options.notes?.[code];
+		throw refusal(this.getNode(), response.statusCode, response.body, note);
 	}
 }

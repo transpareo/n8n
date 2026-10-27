@@ -25,7 +25,7 @@ export const PASSPORT_STATUSES: INodePropertyOptions[] = [
 	{ name: 'Suspended (Recall or Hold)', value: 'suspended' },
 ];
 
-const writeOperations = ['create', 'validate'];
+const writeOperations = ['create', 'createMany', 'validate'];
 
 const operations: INodePropertyOptions[] = [
 	{
@@ -60,6 +60,13 @@ const operations: INodePropertyOptions[] = [
 			request: { method: 'POST', url: '/dpps' },
 			send: { preSend: [passportBody] },
 		},
+	},
+	{
+		name: 'Create Many',
+		value: 'createMany',
+		action: 'Create many passports',
+		description:
+			'Create and publish a passport for every input item, in as few calls as the workspace allows',
 	},
 	{
 		name: 'Get',
@@ -167,7 +174,7 @@ const operations: INodePropertyOptions[] = [
 
 const passportOperations = operations
 	.map((operation) => String(operation.value))
-	.filter((value) => !['create', 'validate', 'getRequirements', 'getAll'].includes(value));
+	.filter((value) => ![...writeOperations, 'getRequirements', 'getAll'].includes(value));
 
 const granularity: INodeProperties = {
 	displayName: 'Granularity',
@@ -252,6 +259,15 @@ export const passportDescription: INodeProperties[] = [
 		description: 'The product the passport describes',
 	}),
 	locator({
+		name: 'product',
+		displayName: 'Product',
+		resource,
+		operations: ['createMany'],
+		searchListMethod: 'searchProducts',
+		description:
+			'The product each passport describes, for an item of its own an expression on By ID such as {{ $json.id }}. Every field below is read for each input item in the same way.',
+	}),
+	locator({
 		name: 'passport',
 		displayName: 'Passport',
 		resource,
@@ -302,6 +318,42 @@ export const passportDescription: INodeProperties[] = [
 				placeholder: 'e.g. de',
 			},
 			identifierFields[1],
+		],
+	},
+	{
+		displayName: 'Wait for Completion',
+		name: 'waitForCompletion',
+		type: 'boolean',
+		default: true,
+		displayOptions: showFor(resource, ['createMany']),
+		description:
+			'Whether to wait until the workspace has written every passport and return one item per input item with its result (created, duplicate or error, with the code and message). Off, the node returns one item per call with its task ID and status URL.',
+	},
+	{
+		displayName: 'Bulk Options',
+		name: 'bulkOptions',
+		type: 'collection',
+		placeholder: 'Add Option',
+		displayOptions: showFor(resource, ['createMany']),
+		default: {},
+		options: [
+			{
+				displayName: 'Rows Per Call',
+				name: 'rowsPerCall',
+				type: 'number',
+				typeOptions: { minValue: 0, maxValue: 50000 },
+				default: 0,
+				description:
+					'How many passports one call sends, at most 50,000 and 25 MB. 0 sends as many as the client may write a minute (Bulk DPPs per minute of the API consumer, 5,000 unless changed); a larger number is lowered to it, since the workspace refuses a larger call. Between calls the node waits as long as the workspace asks.',
+			},
+			{
+				displayName: 'Shared Fields (JSON)',
+				name: 'sharedFields',
+				type: 'json',
+				default: '{}',
+				description:
+					'Fields every row takes unless it names its own, such as {"propertyTypeIds": ["804"]}. Objects merge key by key.',
+			},
 		],
 	},
 	{

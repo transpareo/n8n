@@ -2,13 +2,24 @@ import {
 	NodeOperationError,
 	type IDataObject,
 	type IExecuteSingleFunctions,
+	type IGetNodeParameterOptions,
 	type IHttpRequestOptions,
+	type INode,
 } from 'n8n-workflow';
 
 type PropertyRow = {
 	propertyTypeId?: string;
 	value?: string;
 };
+
+type NodeContext = { getNode(): INode };
+
+// A parameter of the node, read for one request or for one input item.
+export type ParameterReader = (
+	name: string,
+	fallback?: unknown,
+	options?: IGetNodeParameterOptions,
+) => unknown;
 
 // Leaves out what a person left empty, so an update writes only what it
 // names.
@@ -69,7 +80,7 @@ export function setBody(
 // A JSON field as an object, left out when empty. n8n hands a JSON
 // parameter over as text or, from an expression, as the object itself.
 export function jsonObject(
-	context: IExecuteSingleFunctions,
+	context: NodeContext,
 	value: unknown,
 	label: string,
 ): IDataObject | undefined {
@@ -168,8 +179,30 @@ function locatorValue(context: IExecuteSingleFunctions, name: string): string {
 	return String(context.getNodeParameter(name, '', { extractValue: true }));
 }
 
-// A passport write. The identifiers follow the granularity: a batch
-// passport names its lot, an item passport its lot and its serial.
+// A new passport, as Create and each row of Create Many send it. The
+// identifiers follow the granularity: a batch passport names its lot,
+// an item passport its lot and its serial.
+export function newPassport(context: NodeContext, read: ParameterReader): IDataObject {
+	const granularity = read('granularity', '') as string;
+	const lotNamed = granularity === 'batch' || granularity === 'item';
+	const additional = read('additionalFields', {}) as IDataObject;
+	const product = String(read('product', '', { extractValue: true }));
+	const lot = lotNamed ? (read('batchIdentifier', '') as string) : undefined;
+	const serial = granularity === 'item' ? (read('serialIdentifier', '') as string) : undefined;
+
+	return compact({
+		unlockableId: Number(product),
+		granularity,
+		batchIdentifier: lot,
+		serialIdentifier: serial,
+		description: additional.description,
+		modelIdentifier: additional.modelIdentifier,
+		locale: additional.locale,
+		dynamicData: jsonObject(context, additional.dynamicData, 'Dynamic Data (JSON)'),
+	});
+}
+
+// A passport write: a new passport, or the fields an update names.
 export async function passportBody(
 	this: IExecuteSingleFunctions,
 	requestOptions: IHttpRequestOptions,
@@ -184,20 +217,10 @@ export async function passportBody(
 		return setBody(requestOptions, { dpp });
 	}
 
-	const granularity = this.getNodeParameter('granularity', '') as string;
-	const lotNamed = granularity === 'batch' || granularity === 'item';
-	const additional = this.getNodeParameter('additionalFields', {}) as IDataObject;
-	const dpp = compact({
-		unlockableId: Number(locatorValue(this, 'product')),
-		granularity,
-		batchIdentifier: lotNamed ? this.getNodeParameter('batchIdentifier', '') : undefined,
-		serialIdentifier:
-			granularity === 'item' ? this.getNodeParameter('serialIdentifier', '') : undefined,
-		description: additional.description,
-		modelIdentifier: additional.modelIdentifier,
-		locale: additional.locale,
-		dynamicData: jsonObject(this, additional.dynamicData, 'Dynamic Data (JSON)'),
+	const dpp = newPassport(this, (name, fallback, options) => {
+		return this.getNodeParameter(name, fallback, options);
 	});
+	const additional = this.getNodeParameter('additionalFields', {}) as IDataObject;
 	const options = setBody(requestOptions, { dpp });
 
 	return withIdempotencyKey(options, additional.idempotencyKey);
