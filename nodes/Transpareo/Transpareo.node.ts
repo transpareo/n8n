@@ -9,9 +9,11 @@ import {
 	type INodeTypeDescription,
 } from 'n8n-workflow';
 import { credentialTest } from '../shared/connection';
+import { run } from './bulk/imports';
 import { createMany } from './bulk/passports';
 import { listSearch, loadOptions } from './methods';
 import { componentDescription } from './resources/component';
+import { importDescription } from './resources/import';
 import { lotDescription } from './resources/lot';
 import { passportDescription } from './resources/passport';
 import { productDescription } from './resources/product';
@@ -52,7 +54,7 @@ export class Transpareo implements INodeType {
 		version: 1,
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
 		description:
-			'Work with the products, components, Digital Product Passports, lots and tasks of a Transpareo workspace',
+			'Work with the products, components, Digital Product Passports, lots, tasks and imports of a Transpareo workspace',
 		defaults: {
 			name: 'Transpareo',
 		},
@@ -89,6 +91,10 @@ export class Transpareo implements INodeType {
 						value: 'component',
 					},
 					{
+						name: 'Import',
+						value: 'import',
+					},
+					{
 						name: 'Lot',
 						value: 'lot',
 					},
@@ -112,6 +118,7 @@ export class Transpareo implements INodeType {
 			...passportDescription,
 			...lotDescription,
 			...taskDescription,
+			...importDescription,
 		],
 	};
 
@@ -125,5 +132,6 @@ export class Transpareo implements INodeType {
 	// declarative routing, one request per item, cannot express.
 	customOperations = {
 		passport: { createMany: continuing(createMany) },
+		import: { run: continuing(run) },
 	};
 }
