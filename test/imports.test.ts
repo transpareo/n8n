@@ -74,6 +74,7 @@ describe('Transpareo import Run', () => {
 		});
 		workspace.on('POST', '/api/imports/7/validate', () => {
 			state = { ...state, status: 'validating' };
+			delete state.preview;
 			return { status: 202, body: state };
 		});
 		workspace.on('POST', '/api/imports/7/execute', () => {
@@ -100,12 +101,11 @@ describe('Transpareo import Run', () => {
 		revertable: true,
 	};
 
-	// The import as the workspace answers it once mapped: without the
-	// preview it shows only while fresh.
-	function mapped() {
-		const answer: IDataObject = { ...state, status: 'mapped' };
-		delete answer.preview;
-		return answer;
+	// The import as the workspace answers it once mapped. The preview
+	// stays while the import takes a mapping; a running one leaves it
+	// out.
+	function mapped(): IDataObject {
+		return { ...state, status: 'mapped' };
 	}
 
 	function request(method: string, path: string) {
@@ -271,6 +271,67 @@ describe('Transpareo import Run', () => {
 		expect(request('PUT', '/api/imports/7/mappings')).toBeUndefined();
 		const polls = workspace.apiRequests().filter((one) => one.path === '/api/imports/7');
 		expect(polls).toHaveLength(1);
+	});
+
+	// The answer camelizes the column keys of `mappings`, and a key
+	// with `_<digit>` never maps back, so the mapping sent names each
+	// column by the preview's key.
+	it('overrides a column the workspace mapped on its own, under the key of its preview', async () => {
+		const columns = [
+			preview.columns[0],
+			{
+				header: 'Recycled content',
+				column: 'recycled_content',
+				suggestedAction: 'use_existing',
+				typeId: '806',
+				typeName: 'Recycled content',
+				matchType: 'exact',
+			},
+			{
+				header: 'Colour',
+				column: 'colour_6650',
+				suggestedAction: 'use_existing',
+				typeId: '805',
+				typeName: 'Colour',
+				matchType: 'exact',
+			},
+		];
+		const name = { action: 'map_to_attribute', coreAttribute: 'name', isSingleValue: true };
+		const colour = { action: 'use_existing', typeId: '805', isSingleValue: true };
+		state = {
+			...mapped(),
+			preview: { ...preview, columns },
+			mappings: {
+				name,
+				recycledContent: { action: 'use_existing', typeId: '806', isSingleValue: true },
+				colour6650: colour,
+			},
+		};
+
+		await runNode(node, workspace, {
+			parameters: {
+				...run,
+				columnMappings: { mapping: [{ column: 'Recycled content', mapTo: 'skip' }] },
+			},
+			binary: [sheet],
+		});
+
+		expect(JSON.parse(request('PUT', '/api/imports/7/mappings')?.body ?? '')).toEqual({
+			mappings: { name, recycled_content: { action: 'skip' }, colour_6650: colour },
+		});
+	});
+
+	it('stops before mapping anything where the answer lacks the column list', async () => {
+		state = { ...mapped(), mappings: { name: { action: 'map_to_attribute' } } };
+		delete state.preview;
+
+		const runs = runNode(node, workspace, {
+			parameters: { ...run, columnMappings: { mapping: [{ column: 'GTIN', mapTo: 'skip' }] } },
+			binary: [sheet],
+		});
+
+		await expect(runs).rejects.toThrow('The workspace answered import 7 without its column list');
+		expect(request('PUT', '/api/imports/7/mappings')).toBeUndefined();
 	});
 
 	it('reads an import and reverts it by force', async () => {

@@ -31,7 +31,7 @@ type Column = {
 
 type PropertyType = { id: string; name: string };
 
-type Preview = { columns?: Column[]; propertyTypes?: PropertyType[] };
+type Preview = { columns: Column[]; propertyTypes?: PropertyType[] };
 
 type Override = { column?: string; mapTo?: string; target?: string };
 
@@ -99,22 +99,19 @@ function suggestionOf(column: Column): IDataObject | undefined {
 	}
 }
 
-function propertyTypeId(context: IExecuteFunctions, target: string, preview?: Preview) {
+function propertyTypeId(context: IExecuteFunctions, target: string, preview: Preview) {
 	if (/^\d+$/.test(target)) return target;
 
 	const wanted = target.toLowerCase();
-	const found = preview?.propertyTypes?.find((type) => type.name.toLowerCase() === wanted);
+	const found = preview.propertyTypes?.find((type) => type.name.toLowerCase() === wanted);
 	if (found) return found.id;
 
-	const description = preview
-		? 'Check the name against the property types of the workspace'
-		: 'The workspace mapped every column on its own and lists no property types, so name it by its ID';
 	throw new NodeOperationError(context.getNode(), `No property type is named '${target}'`, {
-		description,
+		description: 'Check the name against the property types of the workspace',
 	});
 }
 
-function overrideMapping(context: IExecuteFunctions, override: Override, preview?: Preview) {
+function overrideMapping(context: IExecuteFunctions, override: Override, preview: Preview) {
 	const target = (override.target ?? '').trim();
 	switch (override.mapTo) {
 		case 'skip':
@@ -151,22 +148,46 @@ function unmatchedMapping(context: IExecuteFunctions, unmatched: Column[]): IDat
 	return Object.fromEntries(entries);
 }
 
+// The key an answer gives a column of `mappings`: the workspace
+// camelizes every key it answers, these too, so `recycled_content`
+// reads `recycledContent` and `colour_6650` reads `colour6650`.
+function answeredKey(column: string): string {
+	const parts = column.split('.').map((part) => {
+		if (!/^[a-z][a-z0-9_]*$/.test(part)) return part;
+		const [head, ...words] = part.split('_');
+		const capitalized = words.map((word) => word.charAt(0).toUpperCase() + word.slice(1));
+		return head + capitalized.join('');
+	});
+	return parts.join('.');
+}
+
 // The mapping to send, or undefined where the import mapped itself and
-// nothing overrides it. Overrides name a column by heading or key.
+// nothing overrides it. It names each column by the preview's key; a
+// column keeps what the workspace mapped unless an override names it by
+// heading or key.
 function mappingsOf(context: IExecuteFunctions, imported: IDataObject): IDataObject | undefined {
 	const overrides = context.getNodeParameter('columnMappings.mapping', 0, []) as Override[];
-	const preview = imported.preview as Preview | undefined;
 	if (imported.status !== 'fresh' && overrides.length === 0) return undefined;
 
-	const current = (imported.mappings ?? {}) as IDataObject;
-	const columns: Column[] = preview?.columns ?? Object.keys(current).map((column) => ({ column }));
-	const keys = new Map<string, string>();
-	for (const column of columns) {
-		keys.set(column.column.toLowerCase(), column.column);
-		if (column.header) keys.set(column.header.toLowerCase(), column.column);
+	const preview = imported.preview as Preview | undefined;
+	if (!preview?.columns) {
+		const message = `The workspace answered import ${imported.id} without its column list`;
+		throw new NodeOperationError(context.getNode(), message, {
+			description:
+				'The node maps the columns of a file by that list and stops before importing anything without it. A file whose columns the workspace maps on its own imports without Column Mappings.',
+		});
 	}
 
-	const mappings: IDataObject = { ...current };
+	const answered = (imported.mappings ?? {}) as IDataObject;
+	const keys = new Map<string, string>();
+	const mappings: IDataObject = {};
+	for (const column of preview.columns) {
+		keys.set(column.column.toLowerCase(), column.column);
+		if (column.header) keys.set(column.header.toLowerCase(), column.column);
+		const stored = answered[answeredKey(column.column)];
+		if (stored) mappings[column.column] = stored;
+	}
+
 	for (const override of overrides) {
 		const key = keys.get((override.column ?? '').trim().toLowerCase());
 		if (!key) {
@@ -177,7 +198,7 @@ function mappingsOf(context: IExecuteFunctions, imported: IDataObject): IDataObj
 	}
 
 	const unmatched: Column[] = [];
-	for (const column of preview?.columns ?? []) {
+	for (const column of preview.columns) {
 		if (mappings[column.column]) continue;
 		const suggestion = suggestionOf(column);
 		if (suggestion) mappings[column.column] = compact(suggestion);
