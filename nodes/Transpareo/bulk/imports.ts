@@ -10,9 +10,11 @@ import { patientRequest } from '../../shared/transport';
 import { compact } from '../shared/body';
 import { finished } from '../shared/tasks';
 
-// The matches the workspace resolves a column by. A column it matched
-// to nothing, or only suggests creating a type for, is unmatched.
-const MATCHED = ['exact', 'attribute', 'fuzzy'];
+// The matches the workspace resolves a column by, `remembered` being
+// the target an earlier import saved for that column. A column it
+// matched to nothing, or only suggests creating a type for, is
+// unmatched.
+const MATCHED = ['exact', 'attribute', 'fuzzy', 'remembered'];
 
 const SHOWN_ROW_ERRORS = 10;
 

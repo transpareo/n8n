@@ -184,6 +184,32 @@ describe('Transpareo import Run', () => {
 		expect(items[0].pairedItem).toEqual([{ item: 0 }, { item: 1 }]);
 	});
 
+	it('takes the mapping the workspace remembers for a column from an earlier import', async () => {
+		const note = {
+			header: 'Note',
+			column: 'note',
+			suggestedAction: 'use_existing',
+			typeId: '806',
+			typeName: 'Note',
+			matchType: 'remembered',
+		};
+		state = { ...state, preview: { ...preview, columns: [...preview.columns, note] } };
+
+		await runNode(node, workspace, {
+			parameters: { ...run, unmatchedColumns: 'stop' },
+			binary: [sheet],
+		});
+
+		expect(JSON.parse(request('PUT', '/api/imports/7/mappings')?.body ?? '')).toEqual({
+			mappings: {
+				name: { action: 'map_to_attribute', coreAttribute: 'name' },
+				gtin: { action: 'map_to_attribute', coreAttribute: 'gtin' },
+				material: { action: 'use_existing', typeId: '804' },
+				note: { action: 'use_existing', typeId: '806' },
+			},
+		});
+	});
+
 	it('stops before writing anything when columns match nothing, naming them', async () => {
 		const note = {
 			header: 'Note',
