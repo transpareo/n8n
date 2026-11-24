@@ -34,7 +34,8 @@
 		"test:watch": "vitest",
 		"test:e2e": "vitest run -c vitest.e2e.config.mts",
 		"typecheck": "tsc --noEmit -p tsconfig.test.json",
-		"release": "n8n-node release",
+		"scan": "npm run build && npx --yes @n8n/scan-community-package@latest .",
+		"release": "npm run scan && n8n-node release",
 		"prepublishOnly": "n8n-node prerelease"
 	},
 	"files": [

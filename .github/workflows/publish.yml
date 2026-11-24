@@ -15,10 +15,10 @@
 # and sets no NODE_AUTH_TOKEN that npm could fall back to; npm uses its
 # default registry, registry.npmjs.org.
 #
-# A release starts locally with `npm run release`, which lints, builds,
-# asks for the version, updates the changelog, commits, tags and pushes;
-# the tag starts this workflow, where the same command lints, builds and
-# publishes.
+# A release starts locally with `npm run release`, which runs n8n's
+# package scan, lints, builds, asks for the version, updates the
+# changelog, commits, tags and pushes; the tag starts this workflow,
+# where the same command scans, lints, builds and publishes.
 
 name: Publish
 

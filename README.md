@@ -307,6 +307,7 @@ mise install          # Node 24, as pinned in mise.toml
 npm install
 npm run build
 npm run lint          # n8n's own lint for community nodes
+npm run scan          # the scan n8n's review runs, with its newest rules
 npm test              # the nodes run through n8n's workflow engine
 npm run dev           # n8n on http://localhost:5678 with these nodes
 ```
@@ -326,7 +327,8 @@ npm run test:e2e
 It reads, validates, and creates one webhook subscription, which it
 removes again. Releases are published to npm from the `Publish`
 workflow of this repository through npm trusted publishing, with a
-provenance statement.
+provenance statement. `npm run release` runs `npm run scan` first and
+stops on any finding the review of a submitted package would reject.
 
 ## Licence
 
