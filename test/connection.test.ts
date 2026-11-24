@@ -1,39 +1,90 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { CredentialTestContext } from 'n8n-core';
 import type {
-	ICredentialsDecrypted,
-	ICredentialTestFunctions,
+	IAuthenticateRuleResponseSuccessBody,
+	INodeCredentialTestResult,
 	INodeType,
-	IWorkflowExecuteAdditionalData,
 } from 'n8n-workflow';
-import { Transpareo } from '../nodes/Transpareo/Transpareo.node';
-import { TranspareoPollingTrigger } from '../nodes/TranspareoPollingTrigger/TranspareoPollingTrigger.node';
-import { TranspareoTrigger } from '../nodes/TranspareoTrigger/TranspareoTrigger.node';
+import { TranspareoApi } from '../credentials/TranspareoApi.credentials';
 import { FakeWorkspace } from './fake-workspace';
+import { runNode } from './harness';
 
-const NODES: INodeType[] = [
-	new Transpareo(),
-	new TranspareoTrigger(),
-	new TranspareoPollingTrigger(),
-];
+type Refusal = {
+	message: string;
+	cause?: { code?: string; response?: { status: number; statusText?: string } };
+};
 
-// n8n's credential tester runs the function a node names under
-// `testedBy`, in this context, with the credential as it was entered.
+const { test } = new TranspareoApi();
+
+// The node n8n's credential tester builds around a credential's test
+// request: one property whose routing is the request as declared.
+const tester = {
+	description: {
+		displayName: 'Credential test',
+		name: 'credentialTest',
+		group: ['input'],
+		version: 1,
+		description: '',
+		defaults: { name: 'Credential test' },
+		inputs: ['main'],
+		outputs: ['main'],
+		credentials: [{ name: 'transpareoApi', required: true }],
+		properties: [
+			{
+				displayName: 'Temp',
+				name: 'temp',
+				type: 'string',
+				default: '',
+				routing: { request: test.request },
+			},
+		],
+	},
+} as INodeType;
+
+function failed(message: string): INodeCredentialTestResult {
+	return { status: 'Error', message };
+}
+
+// A refused request as n8n's credential tester words it: the status
+// text of an answer, else the code of a network failure, else the
+// message of what the credential threw.
+function refusal(error: Refusal): INodeCredentialTestResult {
+	const response = error.cause?.response;
+	if (response) {
+		return failed(response.statusText || `Received HTTP status code: ${response.status}`);
+	}
+	return failed(error.cause?.code ?? error.message);
+}
+
+// The message of the first body rule the answer trips, read as n8n
+// reads it: lodash `get` on the key, compared with `===`. A dotted
+// path reads the same here.
+function tripped(body: object): string | undefined {
+	const rules = (test.rules ?? []) as IAuthenticateRuleResponseSuccessBody[];
+	const rule = rules.find(({ type, properties }) => {
+		if (type !== 'responseSuccessBody') return false;
+		const value = properties.key
+			.split('.')
+			.reduce<unknown>((at, key) => (at as Record<string, unknown>)?.[key], body);
+		return value === properties.value;
+	});
+	return rule?.properties.message;
+}
+
+// n8n's credential tester for a credential that declares a test
+// request: it runs the request with a fresh token, then applies the
+// rules to the answer.
 async function testConnection(workspace: FakeWorkspace, data: object = {}) {
-	const test = new Transpareo().methods.credentialTest.transpareoApiTest;
-	const context = new CredentialTestContext({} as IWorkflowExecuteAdditionalData);
-	const credential = {
-		id: '1',
-		name: 'Transpareo',
-		type: 'transpareoApi',
-		data: {
-			workspaceUrl: `${workspace.origin}/`,
-			clientId: 'client-1',
-			clientSecret: 'secret-1',
-			...data,
-		},
-	} as ICredentialsDecrypted;
-	return await test.call(context as unknown as ICredentialTestFunctions, credential);
+	const credentials = { workspaceUrl: `${workspace.origin}/`, ...data };
+	let items;
+	try {
+		items = await runNode(tester, workspace, { parameters: {}, credentials });
+	} catch (error) {
+		return refusal(error as Refusal);
+	}
+
+	const message = tripped(items[0].json);
+	if (message) return failed(message);
+	return { status: 'OK', message: 'Connection successful!' };
 }
 
 describe('Transpareo connection test', () => {
@@ -47,16 +98,6 @@ describe('Transpareo connection test', () => {
 		await workspace.stop();
 	});
 
-	// n8n takes the test of the first node it finds using the
-	// credential, so every node names the same one.
-	it('is named by every node using the credential', () => {
-		for (const node of NODES) {
-			const [credential] = node.description.credentials ?? [];
-			expect(credential.testedBy).toBe('transpareoApiTest');
-			expect(node.methods?.credentialTest?.transpareoApiTest).toBeTypeOf('function');
-		}
-	});
-
 	it('passes for a consumer holding a permission', async () => {
 		workspace.on('GET', '/api/me', { body: { scope: ['product_access'] } });
 
@@ -64,29 +105,21 @@ describe('Transpareo connection test', () => {
 
 		expect(result.status).toBe('OK');
 		const [request] = workspace.apiRequests();
+		expect(request.path).toBe('/api/me');
 		expect(request.headers.authorization).toBe('Bearer token-1');
 		const token = workspace.requests.find((one) => one.path === '/api/oauth/token');
 		expect(new URLSearchParams(token?.body).get('client_id')).toBe('client-1');
 	});
 
 	it('fails for a consumer that may do nothing', async () => {
-		workspace.on('GET', '/api/me', { body: { scope: [], inactiveAccessGroups: [] } });
-
-		const result = await testConnection(workspace);
-
-		expect(result.status).toBe('Error');
-		expect(result.message).toContain('holds no permission');
-	});
-
-	it('names the switched-off access groups that keep its permissions back', async () => {
-		const body = { scope: [], inactiveAccessGroups: ['Sales', 'Quality'] };
+		const body = { scope: [], inactiveAccessGroups: ['Sales'] };
 		workspace.on('GET', '/api/me', { body });
 
 		const result = await testConnection(workspace);
 
 		expect(result.status).toBe('Error');
-		expect(result.message).toContain('"Sales", "Quality"');
-		expect(result.message).toContain('switched off');
+		expect(result.message).toContain('holds no permission');
+		expect(result.message).toContain('switch on');
 	});
 
 	it('says plainly when the workspace refuses the client id or secret', async () => {
@@ -94,22 +127,8 @@ describe('Transpareo connection test', () => {
 
 		const result = await testConnection(workspace);
 
-		expect(result).toMatchObject({
-			status: 'Error',
-			message: 'The workspace refused the client ID or the client secret',
-		});
-	});
-
-	it("passes on the workspace's own message", async () => {
-		const answer = { error: 'TENANT_SUSPENDED', message: 'This workspace is suspended.' };
-		workspace.on('GET', '/api/me', { status: 403, body: answer });
-
-		const result = await testConnection(workspace);
-
-		expect(result).toMatchObject({
-			status: 'Error',
-			message: 'This workspace is suspended. (TENANT_SUSPENDED)',
-		});
+		expect(result).toEqual(failed('The workspace refused the client ID or the client secret'));
+		expect(workspace.apiRequests()).toEqual([]);
 	});
 
 	it('refuses an address that carries a path', async () => {

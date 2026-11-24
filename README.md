@@ -58,10 +58,10 @@ The nodes connect as an API consumer of your workspace, with the OAuth
    - **Client ID**: the key of the API consumer.
    - **Client Secret**: its secret.
 3. Save. n8n tests the credential by asking the workspace what the
-   consumer may do, and the test fails while it may do nothing at all.
-   Where the consumer's access groups are switched off, the test names
-   them. A call the consumer holds no permission for fails with the
-   workspace's answer, which names the permission to add.
+   consumer may do, and the test fails while it may do nothing at all,
+   for instance while all its access groups are switched off. A call
+   the consumer holds no permission for fails with the workspace's
+   answer, which names the permission to add.
 
 The credential exchanges the client id and secret for a token, which
 lives one hour, and fetches a new one by itself when the workspace no

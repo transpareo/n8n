@@ -5,7 +5,6 @@ import {
 	type INodeTypeDescription,
 	type IPollFunctions,
 } from 'n8n-workflow';
-import { credentialTest } from '../shared/connection';
 import { ALL_EVENTS } from '../shared/events';
 import { pollFeed, pollRecords, type RecordWatch } from './watch';
 
@@ -41,7 +40,6 @@ export class TranspareoPollingTrigger implements INodeType {
 			{
 				name: 'transpareoApi',
 				required: true,
-				testedBy: 'transpareoApiTest',
 			},
 		],
 		properties: [
@@ -110,8 +108,6 @@ export class TranspareoPollingTrigger implements INodeType {
 			},
 		],
 	};
-
-	methods = { credentialTest };
 
 	async poll(this: IPollFunctions): Promise<INodeExecutionData[][] | null> {
 		const event = this.getNodeParameter('event') as string;

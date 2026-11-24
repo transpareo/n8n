@@ -8,7 +8,6 @@ import {
 	type INodeType,
 	type INodeTypeDescription,
 } from 'n8n-workflow';
-import { credentialTest } from '../shared/connection';
 import { run } from './bulk/imports';
 import { createMany } from './bulk/passports';
 import { listSearch, loadOptions } from './methods';
@@ -65,7 +64,6 @@ export class Transpareo implements INodeType {
 			{
 				name: 'transpareoApi',
 				required: true,
-				testedBy: 'transpareoApiTest',
 			},
 		],
 		// Every answer but a 401 reaches the operations, which raise a
@@ -123,7 +121,6 @@ export class Transpareo implements INodeType {
 	};
 
 	methods = {
-		credentialTest,
 		listSearch,
 		loadOptions,
 	};

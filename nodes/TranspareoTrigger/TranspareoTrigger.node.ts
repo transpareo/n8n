@@ -9,7 +9,6 @@ import {
 	type IWebhookResponseData,
 	type JsonObject,
 } from 'n8n-workflow';
-import { credentialTest } from '../shared/connection';
 import { VERSIONED_EVENTS } from '../shared/events';
 import { apiRequest, refusalOf, statusOf } from '../shared/transport';
 import { verifySignature } from './signature';
@@ -55,7 +54,6 @@ export class TranspareoTrigger implements INodeType {
 			{
 				name: 'transpareoApi',
 				required: true,
-				testedBy: 'transpareoApiTest',
 			},
 		],
 		webhooks: [
@@ -93,8 +91,6 @@ export class TranspareoTrigger implements INodeType {
 			},
 		],
 	};
-
-	methods = { credentialTest };
 
 	webhookMethods = {
 		default: {

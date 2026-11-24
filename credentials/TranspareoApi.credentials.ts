@@ -1,6 +1,7 @@
 import {
 	UserError,
 	type ICredentialDataDecryptedObject,
+	type ICredentialTestRequest,
 	type ICredentialType,
 	type IHttpRequestHelper,
 	type IHttpRequestOptions,
@@ -19,9 +20,6 @@ type TokenAnswer = {
 	access_token: string;
 };
 
-// The connection test is `testConnection` (nodes/shared/connection.ts),
-// which every node names under `testedBy`: it names the switched-off
-// access groups, which a rule of a declarative test cannot.
 export class TranspareoApi implements ICredentialType {
 	name = 'transpareoApi';
 
@@ -110,6 +108,27 @@ export class TranspareoApi implements ICredentialType {
 
 		return { ...requestOptions, headers };
 	}
+
+	// `scope` lists the permissions the token may use. An empty list
+	// means the consumer may do nothing, so the test fails here,
+	// before a workflow runs into a refusal.
+	test: ICredentialTestRequest = {
+		request: {
+			baseURL: '={{$credentials.workspaceUrl.trim().replace(/\\/+$/, "")}}/api',
+			url: '/me',
+		},
+		rules: [
+			{
+				type: 'responseSuccessBody',
+				properties: {
+					key: 'scope.length',
+					value: 0,
+					message:
+						'The API consumer holds no permission. In the application manager, switch on its access groups or add it to a group that grants what the workflows need.',
+				},
+			},
+		],
+	};
 }
 
 function currentOwner(credentials: ICredentialDataDecryptedObject): string {
