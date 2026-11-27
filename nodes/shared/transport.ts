@@ -16,7 +16,7 @@ import {
 } from 'n8n-workflow';
 import { workspaceOrigin } from './workspace';
 
-export const CREDENTIAL_TYPE = 'transpareoApi';
+export const CREDENTIAL_TYPE = 'transpareoOAuth2Api';
 
 type Context = IExecuteSingleFunctions | IHookFunctions | ILoadOptionsFunctions | IPollFunctions;
 

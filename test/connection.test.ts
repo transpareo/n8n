@@ -4,7 +4,7 @@ import type {
 	INodeCredentialTestResult,
 	INodeType,
 } from 'n8n-workflow';
-import { TranspareoApi } from '../credentials/TranspareoApi.credentials';
+import { TranspareoOAuth2Api } from '../credentials/TranspareoOAuth2Api.credentials';
 import { FakeWorkspace } from './fake-workspace';
 import { runNode } from './harness';
 
@@ -13,7 +13,7 @@ type Refusal = {
 	cause?: { code?: string; response?: { status: number; statusText?: string } };
 };
 
-const { test } = new TranspareoApi();
+const { test } = new TranspareoOAuth2Api();
 
 // The node n8n's credential tester builds around a credential's test
 // request: one property whose routing is the request as declared.
@@ -27,7 +27,7 @@ const tester = {
 		defaults: { name: 'Credential test' },
 		inputs: ['main'],
 		outputs: ['main'],
-		credentials: [{ name: 'transpareoApi', required: true }],
+		credentials: [{ name: 'transpareoOAuth2Api', required: true }],
 		properties: [
 			{
 				displayName: 'Temp',
@@ -107,8 +107,12 @@ describe('Transpareo connection test', () => {
 		const [request] = workspace.apiRequests();
 		expect(request.path).toBe('/api/me');
 		expect(request.headers.authorization).toBe('Bearer token-1');
+
 		const token = workspace.requests.find((one) => one.path === '/api/oauth/token');
-		expect(new URLSearchParams(token?.body).get('client_id')).toBe('client-1');
+		const basic = Buffer.from('client-1:secret-1').toString('base64');
+		expect(token?.headers.authorization).toBe(`Basic ${basic}`);
+		const form = new URLSearchParams(token?.body);
+		expect(Object.fromEntries(form)).toEqual({ grant_type: 'client_credentials' });
 	});
 
 	it('fails for a consumer that may do nothing', async () => {
@@ -122,22 +126,23 @@ describe('Transpareo connection test', () => {
 		expect(result.message).toContain('switch on');
 	});
 
-	it('says plainly when the workspace refuses the client id or secret', async () => {
+	it('fails when the workspace refuses the client id or secret', async () => {
 		workspace.on('POST', '/api/oauth/token', { status: 401, body: { error: 'invalid_client' } });
 
 		const result = await testConnection(workspace);
 
-		expect(result).toEqual(failed('The workspace refused the client ID or the client secret'));
+		expect(result.status).toBe('Error');
+		expect(result.message).toContain('Client authentication failed');
 		expect(workspace.apiRequests()).toEqual([]);
 	});
 
-	it('refuses an address that carries a path', async () => {
+	it('fails for an address that carries a path, before any API call', async () => {
 		const result = await testConnection(workspace, {
 			workspaceUrl: 'https://acme.example.com/en/admin',
 		});
 
 		expect(result.status).toBe('Error');
-		expect(result.message).toContain('Enter the workspace address only');
-		expect(workspace.requests).toEqual([]);
+		const paths = workspace.requests.map((request) => request.path);
+		expect(paths).toEqual(['/en/admin/api/oauth/token']);
 	});
 });

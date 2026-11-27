@@ -37,9 +37,9 @@
 			"typeVersion": 1,
 			"position": [480, 0],
 			"credentials": {
-				"transpareoApi": {
+				"transpareoOAuth2Api": {
 					"id": "",
-					"name": "Transpareo API"
+					"name": "Transpareo OAuth2 API"
 				}
 			}
 		},
@@ -71,9 +71,9 @@
 			"typeVersion": 1,
 			"position": [960, 0],
 			"credentials": {
-				"transpareoApi": {
+				"transpareoOAuth2Api": {
 					"id": "",
-					"name": "Transpareo API"
+					"name": "Transpareo OAuth2 API"
 				}
 			}
 		}

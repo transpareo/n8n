@@ -1,25 +1,81 @@
 import { ExecutionLifecycleHooks, WorkflowExecute } from 'n8n-core';
 import {
 	ICredentialsHelper,
+	NodeHelpers,
 	Workflow,
 	type ICredentialDataDecryptedObject,
 	type ICredentialType,
 	type IDataObject,
-	type IHttpRequestHelper,
 	type IHttpRequestOptions,
 	type INode,
 	type INodeCredentialsDetails,
 	type INodeExecutionData,
+	type INodeParameters,
 	type INodeType,
 	type INodeTypes,
 	type IRun,
 	type IWorkflowExecuteAdditionalData,
 	type NodeParameterValueType,
 } from 'n8n-workflow';
-import { TranspareoApi } from '../credentials/TranspareoApi.credentials';
+import { TranspareoOAuth2Api } from '../credentials/TranspareoOAuth2Api.credentials';
 
-// Credentials as n8n hands them to a node: the stored values, the token
-// minted by the credential's own preAuthentication, and a refresh on 401.
+// The node and node type n8n's credentials helper resolves credential
+// expressions with, outside of any workflow.
+const credentialNode: INode = {
+	id: 'credentials',
+	name: 'Credentials',
+	type: 'mock',
+	typeVersion: 1,
+	position: [0, 0],
+	parameters: {},
+};
+
+const credentialNodeType = { description: { properties: [] } } as unknown as INodeType;
+
+const credentialNodeTypes: INodeTypes = {
+	getByName: () => credentialNodeType,
+	getByNameAndVersion: () => credentialNodeType,
+	getKnownTypes: () => ({}),
+};
+
+// The stored values of a credential as n8n's credentials helper hands
+// them on: the defaults of the type's own fields filled in, then its
+// expressions resolved with the values as `$self`. The fields of
+// oAuth2Api the type leaves alone are not filled in; n8n-core reads
+// them as unset.
+export async function resolveCredentials(
+	type: ICredentialType,
+	stored: ICredentialDataDecryptedObject,
+): Promise<ICredentialDataDecryptedObject> {
+	const values = stored as INodeParameters;
+	const data = NodeHelpers.getNodeParameters(type.properties, values, true, false, null, null);
+	const self = { ...data, oauthTokenData: stored.oauthTokenData };
+	const workflow = new Workflow({
+		nodes: [credentialNode],
+		connections: {},
+		active: false,
+		nodeTypes: credentialNodeTypes,
+	});
+
+	await workflow.expression.acquireIsolate();
+	try {
+		const resolved = workflow.expression.getComplexParameterValue(
+			credentialNode,
+			self as INodeParameters,
+			'manual',
+			{},
+			undefined,
+			undefined,
+			self,
+		);
+		return resolved as ICredentialDataDecryptedObject;
+	} finally {
+		await workflow.expression.releaseIsolate();
+	}
+}
+
+// Credentials as n8n hands them to a node of an OAuth2 type: n8n-core
+// fetches the token, stores it here and fetches another on a 401.
 class TestCredentialsHelper extends ICredentialsHelper {
 	constructor(
 		private readonly types: Record<string, ICredentialType>,
@@ -28,48 +84,39 @@ class TestCredentialsHelper extends ICredentialsHelper {
 		super();
 	}
 
-	getParentTypes(): string[] {
-		return [];
+	getParentTypes(name: string): string[] {
+		return this.types[name]?.extends ?? [];
 	}
 
 	async authenticate(
-		credentials: ICredentialDataDecryptedObject,
-		typeName: string,
+		_credentials: ICredentialDataDecryptedObject,
+		_typeName: string,
 		requestOptions: IHttpRequestOptions,
 	): Promise<IHttpRequestOptions> {
-		const authenticate = this.types[typeName].authenticate;
-		if (typeof authenticate !== 'function') return requestOptions;
-		return await authenticate(credentials, requestOptions);
+		return requestOptions;
 	}
 
-	async preAuthentication(
-		helpers: IHttpRequestHelper,
-		credentials: ICredentialDataDecryptedObject,
-		typeName: string,
-		_node: INode,
-		credentialsExpired: boolean,
-	): Promise<ICredentialDataDecryptedObject | undefined> {
-		const type = this.types[typeName];
-		const expirable = type.properties.find((property) => property.typeOptions?.expirable);
-		if (!type.preAuthentication || !expirable) return undefined;
-		if (credentials[expirable.name] && !credentialsExpired) return undefined;
-
-		const output = await type.preAuthentication.call(helpers, credentials);
-		const updated = { ...credentials, ...output } as ICredentialDataDecryptedObject;
-		this.stored[typeName] = updated;
-		return updated;
+	async preAuthentication(): Promise<ICredentialDataDecryptedObject | undefined> {
+		return undefined;
 	}
 
 	async runPreAuthentication(): Promise<ICredentialDataDecryptedObject | undefined> {
 		return undefined;
 	}
 
+	// A raw read is the stored values as they are, which n8n-core asks
+	// for to see whether another run renewed the token meanwhile.
 	async getDecrypted(
 		_additionalData: IWorkflowExecuteAdditionalData,
 		_nodeCredentials: INodeCredentialsDetails,
 		type: string,
+		_mode: unknown,
+		_executeData: unknown,
+		raw?: boolean,
 	): Promise<ICredentialDataDecryptedObject> {
-		return { ...this.stored[type] };
+		const stored = { ...this.stored[type] };
+		if (raw) return stored;
+		return await resolveCredentials(this.types[type], stored);
 	}
 
 	async getCredentials(): Promise<never> {
@@ -78,7 +125,13 @@ class TestCredentialsHelper extends ICredentialsHelper {
 
 	async updateCredentials(): Promise<void> {}
 
-	async updateCredentialsOauthTokenData(): Promise<void> {}
+	async updateCredentialsOauthTokenData(
+		_nodeCredentials: INodeCredentialsDetails,
+		type: string,
+		data: ICredentialDataDecryptedObject,
+	): Promise<void> {
+		this.stored[type] = { ...this.stored[type], oauthTokenData: data.oauthTokenData };
+	}
 
 	getCredentialsProperties() {
 		return [];
@@ -104,14 +157,12 @@ export async function runNode(
 	workspace: { origin: string },
 	options: RunOptions,
 ): Promise<INodeExecutionData[]> {
-	const credentialType = new TranspareoApi();
+	const credentialType = new TranspareoOAuth2Api();
 	const stored = {
 		[credentialType.name]: {
 			workspaceUrl: workspace.origin,
 			clientId: 'client-1',
 			clientSecret: 'secret-1',
-			accessToken: '',
-			issuedFor: '',
 			...options.credentials,
 		},
 	};

@@ -135,6 +135,18 @@ describe('Transpareo import Run', () => {
 		expect(items[0].pairedItem).toEqual({ item: 0 });
 	});
 
+	// n8n stores the token it fetched with the credential, so every call
+	// after the first sends that token.
+	it('fetches one token for all the calls of the run', async () => {
+		await runNode(node, workspace, { parameters: run, binary: [sheet] });
+
+		const calls = workspace.apiRequests();
+		expect(calls.length).toBeGreaterThan(1);
+		expect(workspace.tokenRequests).toBe(1);
+		const tokens = new Set(calls.map((call) => call.headers.authorization));
+		expect(tokens).toEqual(new Set(['Bearer token-1']));
+	});
+
 	it('sends the input items as one JSON file, with the overrides and options asked for', async () => {
 		const input = [
 			{ Name: 'Align Pant', GTIN: '4012345000009', Material: 'Nylon', Note: 'x' },

@@ -52,7 +52,7 @@ The nodes connect as an API consumer of your workspace, with the OAuth
    and create one. Add it to an access group that grants the
    permissions the workflows need (see the table below). The application manager shows the secret once; copy
    it.
-2. In n8n, create a **Transpareo API** credential with:
+2. In n8n, create a **Transpareo OAuth2 API** credential with:
    - **Workspace Address**: the address of your workspace, such as
      `https://acme.example.com`, without a path.
    - **Client ID**: the key of the API consumer.
@@ -63,11 +63,16 @@ The nodes connect as an API consumer of your workspace, with the OAuth
    the consumer holds no permission for fails with the workspace's
    answer, which names the permission to add.
 
-The credential exchanges the client id and secret for a token, which
-lives one hour, and fetches a new one by itself when the workspace no
-longer accepts the old one. Suspending the consumer in the application
-manager, or regenerating its secret, stops every workflow that uses it
-at the next request.
+The credential builds on n8n's own OAuth2 credential: n8n exchanges the
+client id and secret for a token, which lives one hour, and fetches a
+new one by itself when the workspace no longer accepts the old one.
+Suspending the consumer in the application manager, or regenerating its
+secret, stops every workflow that uses it at the next request.
+
+Versions up to 0.2.1 used a **Transpareo API** credential, which later
+versions replace with **Transpareo OAuth2 API**. n8n no longer loads a
+credential of the earlier type: create a new one with the same three
+values and select it in each Transpareo node.
 
 | What the workflow does | Permissions |
 |---|---|

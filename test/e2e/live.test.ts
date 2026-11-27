@@ -5,7 +5,6 @@ import type {
 	IHttpRequestOptions,
 	IPollFunctions,
 } from 'n8n-workflow';
-import { TranspareoApi } from '../../credentials/TranspareoApi.credentials';
 import { Transpareo } from '../../nodes/Transpareo/Transpareo.node';
 import { TranspareoPollingTrigger } from '../../nodes/TranspareoPollingTrigger/TranspareoPollingTrigger.node';
 import { TranspareoTrigger } from '../../nodes/TranspareoTrigger/TranspareoTrigger.node';
@@ -52,12 +51,23 @@ async function send(options: IHttpRequestOptions, token?: string) {
 
 let token: string | undefined;
 
+// The client credentials grant as n8n sends it for the credential.
+async function mint(): Promise<string> {
+	const secret = Buffer.from(`${env.clientId}:${env.clientSecret}`).toString('base64');
+	const answer = await send({
+		method: 'POST',
+		url: `${origin}/api/oauth/token`,
+		headers: {
+			Authorization: `Basic ${secret}`,
+			'Content-Type': 'application/x-www-form-urlencoded',
+		},
+		body: 'grant_type=client_credentials',
+	});
+	return String(answer.access_token);
+}
+
 async function authenticated(_type: string, options: IHttpRequestOptions) {
-	if (!token) {
-		const helper = { helpers: { httpRequest: (request: IHttpRequestOptions) => send(request) } };
-		const minted = await new TranspareoApi().preAuthentication.call(helper as never, credentials);
-		token = String(minted.accessToken);
-	}
+	token ??= await mint();
 	return await send(options, token);
 }
 

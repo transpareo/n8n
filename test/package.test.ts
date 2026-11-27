@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import manifest from '../package.json';
-import { TranspareoApi } from '../credentials/TranspareoApi.credentials';
+import { TranspareoOAuth2Api } from '../credentials/TranspareoOAuth2Api.credentials';
 import { Transpareo } from '../nodes/Transpareo/Transpareo.node';
 import { TranspareoPollingTrigger } from '../nodes/TranspareoPollingTrigger/TranspareoPollingTrigger.node';
 import { TranspareoTrigger } from '../nodes/TranspareoTrigger/TranspareoTrigger.node';
+import { CREDENTIAL_TYPE } from '../nodes/shared/transport';
 
 type Codex = { node: string };
 
@@ -37,11 +38,27 @@ function sourceOf(distPath: string): string {
 describe('the package as n8n loads it', () => {
 	it('names every node and credential by a file whose class carries the same name', () => {
 		const entries = [...manifest.n8n.nodes, ...manifest.n8n.credentials];
-		const classes = [Transpareo, TranspareoTrigger, TranspareoPollingTrigger, TranspareoApi];
+		const classes = [Transpareo, TranspareoTrigger, TranspareoPollingTrigger, TranspareoOAuth2Api];
 
 		const names = entries.map((entry) => entry.split('/').pop()?.split('.')[0]);
 		expect(names).toEqual(classes.map((type) => type.name));
 		for (const entry of entries) expect(Object.keys(sources)).toContain(sourceOf(entry));
+	});
+
+	it('asks for the credential by the name it declares, in every node and example', () => {
+		const { name } = new TranspareoOAuth2Api();
+		for (const type of [Transpareo, TranspareoTrigger, TranspareoPollingTrigger]) {
+			const credentials = new type().description.credentials ?? [];
+			expect(credentials.map((credential) => credential.name)).toEqual([name]);
+		}
+		expect(CREDENTIAL_TYPE).toBe(name);
+
+		const examples = ['../examples/passport-published.json', '../examples/bulk-upload.json'];
+		for (const example of examples) {
+			const nodes = JSON.parse(documents[example]).nodes as Array<{ credentials?: object }>;
+			const asked = nodes.flatMap((node) => Object.keys(node.credentials ?? {}));
+			expect(new Set(asked)).toEqual(new Set([name]));
+		}
 	});
 
 	it('gives every node a codex file naming it within the package', () => {

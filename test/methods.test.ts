@@ -19,7 +19,7 @@ describe('Transpareo list searches', () => {
 		const result = await listSearch.searchProducts.call(asLoadOptions(context), 'cream', '2');
 
 		const [type, request] = httpRequestWithAuthentication.mock.calls[0];
-		expect(type).toBe('transpareoApi');
+		expect(type).toBe('transpareoOAuth2Api');
 		expect(request.url).toBe('https://acme.example.com/api/products');
 		expect(request.qs).toEqual({ term: 'cream', per_page: 50, page: 2 });
 		expect(result.results[0]).toEqual({ name: 'Cream 1 (NaturaCare)', value: '1' });

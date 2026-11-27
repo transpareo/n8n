@@ -62,7 +62,7 @@ export class Transpareo implements INodeType {
 		outputs: [NodeConnectionTypes.Main],
 		credentials: [
 			{
-				name: 'transpareoApi',
+				name: 'transpareoOAuth2Api',
 				required: true,
 			},
 		],

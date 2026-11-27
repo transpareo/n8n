@@ -117,7 +117,7 @@ describe('Transpareo product operations', () => {
 				operation: 'get',
 				product: { __rl: true, mode: 'id', value: '11' },
 			},
-			credentials: { accessToken: 'expired', issuedFor: '' },
+			credentials: { oauthTokenData: { access_token: 'expired', token_type: 'Bearer' } },
 		});
 
 		expect(items.map((item) => item.json)).toEqual([{ id: 11 }]);

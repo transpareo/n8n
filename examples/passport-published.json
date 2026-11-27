@@ -13,9 +13,9 @@
 			"position": [0, 0],
 			"webhookId": "b6f1d7c2-5e3a-4f0b-8c9d-1a2b3c4d5e6f",
 			"credentials": {
-				"transpareoApi": {
+				"transpareoOAuth2Api": {
 					"id": "",
-					"name": "Transpareo API"
+					"name": "Transpareo OAuth2 API"
 				}
 			}
 		},
@@ -35,9 +35,9 @@
 			"typeVersion": 1,
 			"position": [240, 0],
 			"credentials": {
-				"transpareoApi": {
+				"transpareoOAuth2Api": {
 					"id": "",
-					"name": "Transpareo API"
+					"name": "Transpareo OAuth2 API"
 				}
 			}
 		},

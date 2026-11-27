@@ -48,7 +48,7 @@
 		"n8nNodesApiVersion": 1,
 		"strict": true,
 		"credentials": [
-			"dist/credentials/TranspareoApi.credentials.js"
+			"dist/credentials/TranspareoOAuth2Api.credentials.js"
 		],
 		"nodes": [
 			"dist/nodes/Transpareo/Transpareo.node.js",
