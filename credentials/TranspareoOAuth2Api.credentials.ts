@@ -1,4 +1,5 @@
 import type { ICredentialTestRequest, ICredentialType, Icon, INodeProperties } from 'n8n-workflow';
+import { originExpression } from '../nodes/shared/workspace';
 
 // The OAuth 2.0 client credentials grant of a workspace's API consumer.
 // n8n fetches the token, which lives one hour, before the first request
@@ -25,7 +26,7 @@ export class TranspareoOAuth2Api implements ICredentialType {
 			default: '',
 			required: true,
 			placeholder: 'https://acme.example.com',
-			description: 'The address of your Transpareo workspace, without a path',
+			description: 'The address of your Transpareo workspace, or of any page of it',
 		},
 		{
 			displayName: 'Grant Type',
@@ -37,7 +38,7 @@ export class TranspareoOAuth2Api implements ICredentialType {
 			displayName: 'Access Token URL',
 			name: 'accessTokenUrl',
 			type: 'hidden',
-			default: '={{$self["workspaceUrl"].trim().replace(/\\/+$/, "")}}/api/oauth/token',
+			default: `={{${originExpression('$self["workspaceUrl"]')}}}/api/oauth/token`,
 		},
 		{
 			displayName: 'Client ID',
@@ -82,7 +83,7 @@ export class TranspareoOAuth2Api implements ICredentialType {
 	// before a workflow runs into a refusal.
 	test: ICredentialTestRequest = {
 		request: {
-			baseURL: '={{$credentials.workspaceUrl.trim().replace(/\\/+$/, "")}}/api',
+			baseURL: `={{${originExpression('$credentials.workspaceUrl')}}}/api`,
 			url: '/me',
 		},
 		rules: [

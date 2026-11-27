@@ -54,7 +54,8 @@ The nodes connect as an API consumer of your workspace, with the OAuth
    it.
 2. In n8n, create a **Transpareo OAuth2 API** credential with:
    - **Workspace Address**: the address of your workspace, such as
-     `https://acme.example.com`, without a path.
+     `https://acme.example.com`. The address of any page of it, copied
+     from the browser, works too.
    - **Client ID**: the key of the API consumer.
    - **Client Secret**: its secret.
 3. Save. n8n tests the credential by asking the workspace what the

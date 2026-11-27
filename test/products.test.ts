@@ -34,6 +34,22 @@ describe('Transpareo product operations', () => {
 		expect(request.headers.accept).toContain('application/json');
 	});
 
+	it('reaches the workspace a pasted page address belongs to', async () => {
+		workspace.on('GET', '/api/products/11', { body: { id: 11 } });
+
+		await runNode(node, workspace, {
+			parameters: {
+				resource: 'product',
+				operation: 'get',
+				product: { __rl: true, mode: 'id', value: '11' },
+			},
+			credentials: { workspaceUrl: `${workspace.origin}/en/admin/products?page=2` },
+		});
+
+		const paths = workspace.requests.map((request) => request.path);
+		expect(paths).toEqual(['/api/oauth/token', '/api/products/11']);
+	});
+
 	// The workspace's own message and code head the error, so n8n and
 	// an agent using the node as a tool read what to fix first.
 	it('heads a refusal with the message and the code of the workspace', async () => {

@@ -46,6 +46,12 @@ describe('TranspareoOAuth2Api credential', () => {
 		});
 	});
 
+	it('asks the workspace a pasted page belongs to for the token', async () => {
+		const page = 'https://acme.example.com/en/admin/api_consumers?page=2';
+		const resolved = await resolveCredentials(credential, { ...credentials, workspaceUrl: page });
+		expect(resolved.accessTokenUrl).toBe('https://acme.example.com/api/oauth/token');
+	});
+
 	it('leaves fetching and renewing the token to n8n', () => {
 		const type: ICredentialType = credential;
 		expect(type.preAuthentication).toBeUndefined();

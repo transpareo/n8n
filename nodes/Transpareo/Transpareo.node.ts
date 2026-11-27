@@ -8,6 +8,7 @@ import {
 	type INodeType,
 	type INodeTypeDescription,
 } from 'n8n-workflow';
+import { originExpression } from '../shared/workspace';
 import { run } from './bulk/imports';
 import { createMany } from './bulk/passports';
 import { listSearch, loadOptions } from './methods';
@@ -70,7 +71,7 @@ export class Transpareo implements INodeType {
 		// failed one with the workspace's own message (`raiseRefusal`).
 		// A 401 still throws, so n8n renews the token and sends again.
 		requestDefaults: {
-			baseURL: '={{$credentials.workspaceUrl.trim().replace(/\\/+$/, "")}}/api',
+			baseURL: `={{${originExpression('$credentials.workspaceUrl')}}}/api`,
 			headers: {
 				Accept: 'application/json',
 				'Content-Type': 'application/json',

@@ -136,13 +136,22 @@ describe('Transpareo connection test', () => {
 		expect(workspace.apiRequests()).toEqual([]);
 	});
 
-	it('fails for an address that carries a path, before any API call', async () => {
+	it('passes for a page of the workspace pasted whole', async () => {
+		workspace.on('GET', '/api/me', { body: { scope: ['product_access'] } });
+
 		const result = await testConnection(workspace, {
-			workspaceUrl: 'https://acme.example.com/en/admin',
+			workspaceUrl: 'https://acme.example.com/en/admin/api_consumers',
 		});
 
-		expect(result.status).toBe('Error');
+		expect(result.status).toBe('OK');
 		const paths = workspace.requests.map((request) => request.path);
-		expect(paths).toEqual(['/en/admin/api/oauth/token']);
+		expect(paths).toEqual(['/api/oauth/token', '/api/me']);
+	});
+
+	it('fails for an address without a scheme, before any request', async () => {
+		const result = await testConnection(workspace, { workspaceUrl: 'acme.example.com' });
+
+		expect(result.status).toBe('Error');
+		expect(workspace.requests).toEqual([]);
 	});
 });
